@@ -46,7 +46,7 @@ TestResults/
 .localhistory/
 
 # Entity Framework
-Migrations/
+# Keep migration files tracked for deployment
 
 # Database
 *.mdf
