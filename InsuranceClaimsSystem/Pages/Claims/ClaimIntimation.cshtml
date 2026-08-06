@@ -1,0 +1,208 @@
+@page
+@model ClaimIntimationModel
+@{
+    ViewData["Title"] = "Claim Intimation - New Claim";
+}
+
+<div class="container-fluid" style="padding-bottom: 100px;">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Step 1: Claim Intimation</h2>
+            <p class="text-muted">Report a new loss or damage to initiate the claim process</p>
+        </div>
+    </div>
+
+    <partial name="_ClaimWorkflowStages" model="ClaimStatus.ClaimIntimation" />
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <form method="post" class="form-layout">
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Claim.IncidentDescription" class="form-label">Incident Description <span class="text-danger">*</span></label>
+                        <textarea asp-for="Claim.IncidentDescription" class="form-control" rows="4" placeholder="Describe the loss/damage..."></textarea>
+                        <span asp-validation-for="Claim.IncidentDescription" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Claim.IncidentDate" class="form-label">Incident Date <span class="text-danger">*</span></label>
+                        <input asp-for="Claim.IncidentDate" class="form-control" type="date" />
+                        <span asp-validation-for="Claim.IncidentDate" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Claim.Location" class="form-label">Location <span class="text-danger">*</span></label>
+                        <input asp-for="Claim.Location" class="form-control" placeholder="Where did the incident occur?" />
+                        <span asp-validation-for="Claim.Location" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Claim.EstimatedLoss" class="form-label">Estimated Loss Amount (UGX) <span class="text-danger">*</span></label>
+                        <input id="estimatedLossDisplay" class="form-control" type="text" inputmode="decimal" placeholder="0" value="@(Model.Claim.EstimatedLoss > 0 ? Model.Claim.EstimatedLoss.ToString("N2") : string.Empty)" />
+                        <input asp-for="Claim.EstimatedLoss" type="hidden" />
+                        <span asp-validation-for="Claim.EstimatedLoss" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Claim.PolicyNumber" class="form-label">Policy Number</label>
+                        <input asp-for="Claim.PolicyNumber" class="form-control" placeholder="Optional" />
+                        <span asp-validation-for="Claim.PolicyNumber" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Claim.ClaimType" class="form-label">Claim Type <span class="text-danger">*</span></label>
+                        <select asp-for="Claim.ClaimType" class="form-select" id="claimTypeSelect">
+                            <option value="">Select Claim Type</option>
+                            <option value="Motor Claim">Motor Claim</option>
+                            <option value="Industrial All Risk">Industrial All Risk</option>
+                            <option value="Fire &amp; General">Fire &amp; General</option>
+                            <option value="Workmen Compensation">Workmen Compensation</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <span asp-validation-for="Claim.ClaimType" class="text-danger"></span>
+
+                        <div id="claimTypeOtherRow" style="display: none;" class="mt-3">
+                            <label asp-for="Claim.ClaimTypeOther" class="form-label">Specify Other Claim Type <span class="text-danger">*</span></label>
+                            <input asp-for="Claim.ClaimTypeOther" class="form-control" placeholder="Enter other claim type" />
+                            <span asp-validation-for="Claim.ClaimTypeOther" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Claim.ReportedPersonName" class="form-label">Reported Person Name <span class="text-danger">*</span></label>
+                        <input asp-for="Claim.ReportedPersonName" class="form-control" placeholder="Person reporting the claim" />
+                        <span asp-validation-for="Claim.ReportedPersonName" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Claim.BrokerUserId" class="form-label">Allocated Broker</label>
+                        <select asp-for="Claim.BrokerUserId" class="form-select">
+                            <option value="">-- Select Broker --</option>
+                            @foreach (var broker in Model.AvailableBrokers)
+                            {
+                                <option value="@broker.Id">@broker.FullName (@broker.Email)</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Claim.BrokerUserId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Claim.ContactNumber" class="form-label">Contact Number <span class="text-danger">*</span></label>
+                        <input asp-for="Claim.ContactNumber" class="form-control" type="tel" placeholder="+256..." />
+                        <span asp-validation-for="Claim.ContactNumber" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label asp-for="Claim.AdditionalNotes" class="form-label">Additional Notes</label>
+                        <textarea asp-for="Claim.AdditionalNotes" class="form-control" rows="3" placeholder="Any other relevant information..."></textarea>
+                        <span asp-validation-for="Claim.AdditionalNotes" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-success btn-lg" style="background-color: #28a745; border-color: #28a745; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold;">
+                        <i class="fas fa-check-circle"></i> Submit Claim Intimation
+                    </button>
+                    <a href="/Claims" class="btn btn-secondary btn-lg" style="padding: 12px 24px; font-size: 16px;">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-actions {
+    margin-top: 30px;
+    padding: 20px;
+    border-top: 1px solid #e0e0e0;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    display: flex;
+    gap: 15px;
+    justify-content: flex-start;
+    align-items: center;
+}
+</style>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const claimTypeSelect = document.getElementById('claimTypeSelect');
+            const claimTypeOtherRow = document.getElementById('claimTypeOtherRow');
+            const estimatedLossDisplay = document.getElementById('estimatedLossDisplay');
+            const estimatedLossHidden = document.getElementById('Claim_EstimatedLoss');
+            const form = document.querySelector('form.form-layout');
+
+            if (!claimTypeSelect || !claimTypeOtherRow) {
+                return;
+            }
+
+            const toggleOtherField = function () {
+                const isOther = claimTypeSelect.value === 'Other';
+                claimTypeOtherRow.style.display = isOther ? '' : 'none';
+            };
+
+            claimTypeSelect.addEventListener('change', toggleOtherField);
+            toggleOtherField();
+
+            if (!estimatedLossDisplay || !estimatedLossHidden || !form) {
+                return;
+            }
+
+            const sanitizeAmount = function (value) {
+                const cleaned = (value || '').replace(/,/g, '').replace(/[^\d.]/g, '');
+                const parts = cleaned.split('.');
+                if (parts.length <= 1) {
+                    return cleaned;
+                }
+
+                return parts[0] + '.' + parts.slice(1).join('');
+            };
+
+            const formatAmount = function (value) {
+                const sanitized = sanitizeAmount(value);
+                if (!sanitized) {
+                    return '';
+                }
+
+                const parts = sanitized.split('.');
+                const integerPart = parts[0].replace(/^0+(?=\d)/, '');
+                const decimalPart = parts[1] || '';
+                const formattedInteger = (integerPart || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+                return decimalPart ? formattedInteger + '.' + decimalPart.slice(0, 2) : formattedInteger;
+            };
+
+            const syncHiddenValue = function () {
+                estimatedLossHidden.value = sanitizeAmount(estimatedLossDisplay.value);
+            };
+
+            estimatedLossDisplay.addEventListener('input', function () {
+                const formatted = formatAmount(estimatedLossDisplay.value);
+                estimatedLossDisplay.value = formatted;
+                syncHiddenValue();
+            });
+
+            estimatedLossDisplay.addEventListener('blur', function () {
+                estimatedLossDisplay.value = formatAmount(estimatedLossDisplay.value);
+                syncHiddenValue();
+            });
+
+            form.addEventListener('submit', function () {
+                syncHiddenValue();
+            });
+
+            syncHiddenValue();
+        })();
+    </script>
+}

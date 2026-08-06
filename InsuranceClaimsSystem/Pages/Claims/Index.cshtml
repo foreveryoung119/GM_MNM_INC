@@ -1,0 +1,289 @@
+@page
+@model ClaimsIndexModel
+@{
+    ViewData["Title"] = "Claims";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Insurance Claims</h2>
+            <p class="text-muted">Manage and track your insurance claims</p>
+        </div>
+        <div class="col-md-4 text-end">
+            @if (!User.IsInRole("Broker Company Officer"))
+            {
+                <a href="/Claims/ClaimIntimation" class="btn btn-success">
+                    <i class="fas fa-plus"></i> New Claim
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label" for="search">Search</label>
+                    <input type="text"
+                           class="form-control"
+                           id="search"
+                           name="search"
+                           value="@Model.Search"
+                           placeholder="Claim number, description, person, type" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="statusFilter">Status</label>
+                    <select id="statusFilter" name="statusFilter" class="form-select">
+                        @if (!Model.StatusFilter.HasValue)
+                        {
+                            <option value="" selected>All Statuses</option>
+                        }
+                        else
+                        {
+                            <option value="">All Statuses</option>
+                        }
+                        @foreach (var status in Model.StatusOptions)
+                        {
+                            if (Model.StatusFilter == status)
+                            {
+                                <option value="@status" selected>@status</option>
+                            }
+                            else
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="fromDate">From</label>
+                    <input type="date" class="form-control" id="fromDate" name="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="toDate">To</label>
+                    <input type="date" class="form-control" id="toDate" name="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" />
+                </div>
+                <div class="col-md-12 d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-success">Apply Filters</button>
+                    <a asp-page="/Claims/Index" class="btn btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (Model.Claims.Count == 0)
+    {
+        <div class="alert alert-info">
+            @if (User.IsInRole("Broker Company Officer"))
+            {
+                <span><i class="fas fa-info-circle"></i> No claims found for the selected filters.</span>
+            }
+            else
+            {
+                <span><i class="fas fa-info-circle"></i> No claims found for the selected filters. <a href="/Claims/ClaimIntimation">Create a new claim</a></span>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Claim ID</th>
+                        <th>Incident Description</th>
+                        <th>Status</th>
+                        <th>Completion</th>
+                        <th>Created Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var claim in Model.Claims)
+                    {
+                        var isInactiveClaim = claim.Status == ClaimStatus.Cancelled || claim.Status == ClaimStatus.Rejected || claim.Status == ClaimStatus.Closed;
+                        <tr>
+                            <td>
+                                <strong>
+                                    <a asp-page="./Index" asp-page-handler="Open" asp-route-claimId="@claim.Id" class="text-decoration-none">
+                                        @claim.ClaimNumber
+                                    </a>
+                                </strong>
+                            </td>
+                            <td>@claim.IncidentDescription</td>
+                            <td>
+                                <span class="badge @GetStatusBadgeClass(claim.Status)">
+                                    @FormatStatus(claim.Status)
+                                </span>
+                            </td>
+                            <td>
+                                <span class="@GetCompletionTextClass(claim.Status)">
+                                    <i class="fas @GetCompletionIconClass(claim.Status) me-1"></i>@GetCompletionPercentage(claim.Status)%
+                                </span>
+                            </td>
+                            <td>@claim.CreatedDate.ToString("MMM dd, yyyy")</td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @if (User.IsInRole("Broker Company Officer"))
+                                    {
+                                        <a href="/Claims/DocumentRequest/@claim.Id" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-file-signature"></i> Request Documents
+                                        </a>
+                                        @if (!isInactiveClaim)
+                                        {
+                                            <a href="/Claims/DocumentSubmission/@claim.Id" class="btn btn-sm btn-warning">
+                                                <i class="fas fa-upload"></i> View / Upload Docs
+                                            </a>
+                                        }
+                                    }
+                                    @if ((User.IsInRole("Assessor") || User.IsInRole("Insurance Officer") || User.IsInRole("Admin")) && !isInactiveClaim)
+                                    {
+                                        <a href="/Claims/DocumentSubmission/@claim.Id" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-upload"></i> View / Upload Docs
+                                        </a>
+                                    }
+                                    <a asp-page="./Index" asp-page-handler="Open" asp-route-claimId="@claim.Id" class="btn btn-sm btn-info">
+                                        <i class="fas fa-play"></i> Open
+                                    </a>
+                                    @if ((User.IsInRole("Insurance Officer") || User.IsInRole("Admin")) && !isInactiveClaim)
+                                    {
+                                        <a href="/Claims/AssessorAppointment/@claim.Id" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-user-check"></i> Assign Assessor
+                                        </a>
+                                    }
+                                    @if (User.IsInRole("Admin") && !isInactiveClaim)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-danger"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#cancelClaimModal"
+                                                data-claim-id="@claim.Id"
+                                                data-claim-number="@claim.ClaimNumber">
+                                            <i class="fas fa-ban"></i> Cancel Claim
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (User.IsInRole("Admin"))
+{
+    <div class="modal fade" id="cancelClaimModal" tabindex="-1" aria-labelledby="cancelClaimModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="cancelClaimModalLabel"><i class="fas fa-ban me-2"></i>Cancel Claim</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to cancel claim <strong id="cancelClaimNumber"></strong>?</p>
+                    <p class="text-muted mb-0">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep Claim</button>
+                    <form method="post" asp-page-handler="Cancel">
+                        <input type="hidden" name="claimId" id="cancelClaimId" />
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-ban"></i> Yes, Cancel Claim
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        var modal = document.getElementById('cancelClaimModal');
+        if (modal) {
+            modal.addEventListener('show.bs.modal', function (event) {
+                var btn = event.relatedTarget;
+                document.getElementById('cancelClaimId').value = btn.getAttribute('data-claim-id');
+                document.getElementById('cancelClaimNumber').textContent = btn.getAttribute('data-claim-number');
+            });
+        }
+    })();
+    </script>
+}
+
+@functions {
+    private string GetStatusBadgeClass(ClaimStatus? status)
+    {
+        return status switch
+        {
+            ClaimStatus.ClaimIntimation => "bg-secondary",
+            ClaimStatus.AssessorAppointed => "bg-primary",
+            ClaimStatus.DocumentsRequested => "bg-warning",
+            ClaimStatus.DocumentsSubmitted => "bg-info",
+            ClaimStatus.UnderNegotiation => "bg-warning",
+            ClaimStatus.DischargeVoucherPrepared => "bg-success",
+            ClaimStatus.PaymentReleased => "bg-success",
+            ClaimStatus.Closed => "bg-dark",
+            ClaimStatus.Cancelled => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string FormatStatus(ClaimStatus? status)
+    {
+        return status switch
+        {
+            ClaimStatus.ClaimIntimation => "Claim Intimation",
+            ClaimStatus.AssessorAppointed => "Assessor Appointed",
+            ClaimStatus.DocumentsRequested => "Documents Requested",
+            ClaimStatus.DocumentsSubmitted => "Documents Submitted",
+            ClaimStatus.UnderNegotiation => "Under Negotiation",
+            ClaimStatus.DischargeVoucherPrepared => "DV Prepared",
+            ClaimStatus.PaymentReleased => "Payment Released",
+            ClaimStatus.Closed => "Closed",
+            ClaimStatus.Cancelled => "Cancelled",
+            _ => status?.ToString() ?? "Unknown"
+        };
+    }
+
+    private int GetCompletionPercentage(ClaimStatus? status)
+    {
+        return status switch
+        {
+            ClaimStatus.ClaimIntimation => 14,
+            ClaimStatus.AssessorAppointed => 29,
+            ClaimStatus.DocumentsRequested => 43,
+            ClaimStatus.DocumentsSubmitted => 57,
+            ClaimStatus.UnderNegotiation => 71,
+            ClaimStatus.DischargeVoucherPrepared => 86,
+            ClaimStatus.PaymentReleased => 100,
+            ClaimStatus.Closed => 100,
+            ClaimStatus.Rejected => 100,
+            ClaimStatus.Cancelled => 100,
+            _ => 0
+        };
+    }
+
+    private string GetCompletionIconClass(ClaimStatus? status)
+    {
+        return status switch
+        {
+            ClaimStatus.Rejected or ClaimStatus.Cancelled => "fa-times-circle",
+            ClaimStatus.PaymentReleased or ClaimStatus.Closed => "fa-check-circle",
+            ClaimStatus.ClaimIntimation => "fa-hourglass-start",
+            ClaimStatus.AssessorAppointed or ClaimStatus.DocumentsRequested or ClaimStatus.DocumentsSubmitted or ClaimStatus.UnderNegotiation or ClaimStatus.DischargeVoucherPrepared => "fa-spinner",
+            _ => "fa-circle"
+        };
+    }
+
+    private string GetCompletionTextClass(ClaimStatus? status)
+    {
+        return status switch
+        {
+            ClaimStatus.Rejected or ClaimStatus.Cancelled => "text-danger fw-semibold",
+            ClaimStatus.PaymentReleased or ClaimStatus.Closed => "text-success fw-semibold",
+            _ => "text-muted"
+        };
+    }
+}

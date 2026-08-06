@@ -1,0 +1,188 @@
+@page "{claimId:int}"
+@model DischargeVoucherModel
+@{
+    ViewData["Title"] = "Discharge Voucher";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Step 5: Discharge Voucher (DV)</h2>
+            <p class="text-muted">Prepare and finalize the discharge voucher for payment</p>
+        </div>
+    </div>
+
+    <partial name="_ClaimWorkflowStages" model="Model.Claim?.Status ?? ClaimStatus.ClaimIntimation" />
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+            {
+                <div class="alert alert-success mb-4">@Model.StatusMessage</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger mb-4">@Model.ErrorMessage</div>
+            }
+
+            @if (!ViewContext.ModelState.IsValid)
+            {
+                <div asp-validation-summary="All" class="alert alert-danger mb-4"></div>
+            }
+
+            @if (User.IsInRole("Broker Company Officer"))
+            {
+                <div class="alert alert-info">
+                    <i class="fas fa-eye"></i> You have view-only access at this stage.
+                </div>
+            }
+
+            <form method="post" enctype="multipart/form-data">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="DVNumber" class="form-label">Discharge Voucher Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="DVNumber" name="DVNumber" value="@Model.Claim?.DVNumber" placeholder="e.g., DV-2026-001" required />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="DVDate" class="form-label">DV Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="DVDate" name="DVDate" value="@(Model.Claim?.DischargeVoucherDate?.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" required />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="PaymentAmountDisplay" class="form-label">Payment Amount (UGX) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="PaymentAmountDisplay" inputmode="numeric" value="@(Model.Claim?.SettledAmount > 0 ? Model.Claim?.SettledAmount?.ToString("N0") : "")" placeholder="@Model.Claim?.SettledAmount" required />
+                        <input type="hidden" id="PaymentAmount" name="PaymentAmount" value="@Model.Claim?.SettledAmount" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="PaymentMethod" class="form-label">Payment Method <span class="text-danger">*</span></label>
+                        <select class="form-control" id="PaymentMethod" name="PaymentMethod" required>
+                            <option value="" selected="@(string.IsNullOrWhiteSpace(Model.Claim?.PaymentMethod) ? "selected" : null)">Select Payment Method</option>
+                            <option value="Bank Transfer" selected="@(string.Equals(Model.Claim?.PaymentMethod, "Bank Transfer", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">Bank Transfer</option>
+                            <option value="Cheque" selected="@(string.Equals(Model.Claim?.PaymentMethod, "Cheque", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">Cheque</option>
+                            <option value="Mobile Money" selected="@(string.Equals(Model.Claim?.PaymentMethod, "Mobile Money", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">Mobile Money</option>
+                            <option value="Cash" selected="@(string.Equals(Model.Claim?.PaymentMethod, "Cash", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">Cash</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label for="BankDetails" class="form-label">Beneficiary Bank Details</label>
+                        <textarea class="form-control" id="BankDetails" name="BankDetails" rows="3" placeholder="Account name, number, bank details...">@Model.Claim?.AdditionalNotes</textarea>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label for="DVFile" class="form-label">Upload Discharge Voucher <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="DVFile" name="DVFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.xls,.xlsx" />
+                        <small class="text-muted">Supported formats: PDF, DOC, DOCX, JPG, PNG, GIF, XLS, XLSX. Max 10MB.</small>
+                    </div>
+                </div>
+
+                @if (!User.IsInRole("Broker Company Officer"))
+                {
+                    <div class="mb-4 d-flex gap-2">
+                        <button type="submit"
+                                class="btn btn-outline-primary"
+                                formaction="?handler=Upload"
+                                formmethod="post"
+                                formnovalidate>
+                            <i class="fas fa-upload"></i> Upload DV
+                        </button>
+                        <button type="submit"
+                                class="btn @(Model.IsDischargeVoucherNotAvailable ? "btn-outline-secondary" : "btn-outline-dark")"
+                                formaction="?handler=SetDvNotAvailable"
+                                formmethod="post"
+                                formnovalidate
+                                name="isNotAvailable"
+                                value="@(!Model.IsDischargeVoucherNotAvailable)">
+                            @(Model.IsDischargeVoucherNotAvailable ? "DV Required Again" : "DV Not Available")
+                        </button>
+                    </div>
+                }
+
+                @if (Model.UploadedDischargeVoucher != null)
+                {
+                    <div class="alert alert-secondary mb-4">
+                        <div><strong>Existing uploaded DV:</strong> @Model.UploadedDischargeVoucher.FileName@Model.UploadedDischargeVoucher.FileExtension</div>
+                        <div class="small text-muted">Uploaded @Model.UploadedDischargeVoucher.UploadedDate.ToString("MMM dd, yyyy HH:mm")</div>
+                        <div class="mt-2">
+                            <a asp-page-handler="Open"
+                               asp-route-claimId="@Model.Claim?.Id"
+                               asp-route-documentId="@Model.UploadedDischargeVoucher.Id"
+                               class="btn btn-sm btn-outline-primary"
+                               target="_blank"
+                               rel="noopener noreferrer">
+                                <i class="fas fa-eye"></i> View uploaded DV
+                            </a>
+                        </div>
+                    </div>
+                }
+
+                @if (Model.IsDischargeVoucherNotAvailable)
+                {
+                    <div class="alert alert-warning mb-4">
+                        <i class="fas fa-exclamation-triangle"></i> Discharge Voucher is marked as Not Available. You can continue to POP without uploading a DV file.
+                    </div>
+                }
+
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label for="DVNotes" class="form-label">Additional Notes</label>
+                        <textarea class="form-control" id="DVNotes" name="DVNotes" rows="3" placeholder="Terms and conditions for payment...">@Model.Claim?.Notes</textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    @if (!User.IsInRole("Broker Company Officer"))
+                    {
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-arrow-right"></i> Continue to POP
+                        </button>
+                    }
+                    <a asp-page="/Claims/SettlementNegotiation" asp-route-claimId="@Model.Claim?.Id" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-arrow-left"></i> Back to Negotiation
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 10px;
+}
+</style>
+
+<script>
+(function () {
+    var display = document.getElementById('PaymentAmountDisplay');
+    var hidden = document.getElementById('PaymentAmount');
+
+    function formatWithCommas(val) {
+        var num = val.replace(/,/g, '');
+        if (num === '' || isNaN(num)) return val;
+        return Number(num).toLocaleString('en-US');
+    }
+
+    if (display && hidden) {
+        display.addEventListener('input', function () {
+            var raw = this.value.replace(/,/g, '');
+            hidden.value = raw;
+            var pos = this.selectionStart;
+            var prevLen = this.value.length;
+            this.value = formatWithCommas(this.value);
+            this.selectionStart = this.selectionEnd = pos + (this.value.length - prevLen);
+        });
+    }
+})();
+</script>

@@ -1,0 +1,113 @@
+@page "{claimId:int}"
+@model PaymentPOPModel
+@{
+    ViewData["Title"] = "Proof of Payment (POP)";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Step 6: Proof of Payment (POP)</h2>
+            <p class="text-muted">Record and finalize the payment processing</p>
+        </div>
+    </div>
+
+    <partial name="_ClaimWorkflowStages" model="ClaimStatus.PaymentReleased" />
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+            {
+                <div class="alert alert-success mb-4">@Model.StatusMessage</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger mb-4">@Model.ErrorMessage</div>
+            }
+
+            @if (!ViewContext.ModelState.IsValid)
+            {
+                <div asp-validation-summary="All" class="alert alert-danger mb-4"></div>
+            }
+
+            <form method="post" enctype="multipart/form-data">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="PaymentDate" class="form-label">Payment Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="PaymentDate" name="PaymentDate" required />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="TransactionReference" class="form-label">Transaction Reference <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="TransactionReference" name="TransactionReference" placeholder="e.g., TXN-2026-001234" required />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label for="POPFile" class="form-label">Upload Proof of Payment <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="file" class="form-control" id="POPFile" name="POPFile" accept=".pdf,.jpg,.png" />
+                            <button type="submit"
+                                    class="btn btn-outline-primary"
+                                    formaction="?handler=Upload"
+                                    formmethod="post"
+                                    formnovalidate>
+                                <i class="fas fa-upload"></i> Upload POP
+                            </button>
+                        </div>
+                        <small class="text-muted">Supported formats: PDF, JPG, PNG (Max 10MB)</small>
+                    </div>
+                </div>
+
+                @if (Model.UploadedProofOfPayment != null)
+                {
+                    <div class="alert alert-secondary mb-4">
+                        <div><strong>Existing uploaded POP:</strong> @Model.UploadedProofOfPayment.FileName@Model.UploadedProofOfPayment.FileExtension</div>
+                        <div class="small text-muted">Uploaded @Model.UploadedProofOfPayment.UploadedDate.ToString("MMM dd, yyyy HH:mm")</div>
+                        <div class="mt-2">
+                            <a asp-page-handler="Open"
+                               asp-route-claimId="@Model.Claim?.Id"
+                               asp-route-documentId="@Model.UploadedProofOfPayment.Id"
+                               class="btn btn-sm btn-outline-primary"
+                               target="_blank"
+                               rel="noopener noreferrer">
+                                <i class="fas fa-eye"></i> View uploaded POP
+                            </a>
+                        </div>
+                    </div>
+                }
+
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label for="PaymentNotes" class="form-label">Payment Notes</label>
+                        <textarea class="form-control" id="PaymentNotes" name="PaymentNotes" rows="3" placeholder="Details about the payment..."></textarea>
+                    </div>
+                </div>
+
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> Payment has been successfully processed. The claim will now be marked as completed.
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fas fa-check"></i> Complete Claim
+                    </button>
+                    <a asp-page="/Claims/DischargeVoucher" asp-route-claimId="@Model.Claim?.Id" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-arrow-left"></i> Back to Discharge Voucher
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 10px;
+}
+</style>

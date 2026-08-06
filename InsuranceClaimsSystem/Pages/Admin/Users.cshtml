@@ -1,0 +1,168 @@
+@page
+@model InsuranceClaimsSystem.Pages.Admin.UsersModel
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h3 class="card-title mb-4">User Management</h3>
+        <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+        <form method="post" asp-page-handler="Create" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label asp-for="NewUser.Email" class="form-label"></label>
+                    <input asp-for="NewUser.Email" class="form-control" />
+                    <span asp-validation-for="NewUser.Email" class="text-danger"></span>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="NewUser.FullName" class="form-label"></label>
+                    <input asp-for="NewUser.FullName" class="form-control" />
+                    <span asp-validation-for="NewUser.FullName" class="text-danger"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="NewUser.Role" class="form-label"></label>
+                    <select asp-for="NewUser.Role" class="form-select">
+                        @foreach (var role in Model.AvailableRoles)
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </select>
+                    <span asp-validation-for="NewUser.Role" class="text-danger"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="NewUser.Password" class="form-label"></label>
+                    <input asp-for="NewUser.Password" class="form-control" type="password" />
+                    <span asp-validation-for="NewUser.Password" class="text-danger"></span>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="NewUser.CompanyName" class="form-label"></label>
+                    <input asp-for="NewUser.CompanyName" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="NewUser.Department" class="form-label"></label>
+                    <input asp-for="NewUser.Department" class="form-control" />
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-success">Create User</button>
+            </div>
+        </form>
+
+        <div class="table-responsive mb-4">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Full Name</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model.Users)
+                    {
+                        <tr>
+                            <td>@user.Email</td>
+                            <td>@user.FullName</td>
+                            <td>@user.Role</td>
+                            <td>@(user.IsActive ? "Active" : "Inactive")</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-primary me-1" asp-page="./Users" asp-route-editUserId="@user.Id">Edit</a>
+                                <a class="btn btn-sm btn-warning me-1" asp-page="./Users" asp-route-resetPasswordUserId="@user.Id">Reset Password</a>
+                                <form method="post" asp-page-handler="Delete" class="d-inline" onsubmit="return confirm('Delete this user permanently?');">
+                                    <input type="hidden" name="userId" value="@user.Id" />
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.SelectedEditUserId))
+        {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="card-title">Edit User</h4>
+                    <form method="post" asp-page-handler="Edit" class="row g-3">
+                        <input asp-for="EditUser.Id" type="hidden" />
+                        <div class="col-md-4">
+                            <label asp-for="EditUser.Email" class="form-label"></label>
+                            <input asp-for="EditUser.Email" class="form-control" />
+                            <span asp-validation-for="EditUser.Email" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="EditUser.FullName" class="form-label"></label>
+                            <input asp-for="EditUser.FullName" class="form-control" />
+                            <span asp-validation-for="EditUser.FullName" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-2">
+                            <label asp-for="EditUser.Role" class="form-label"></label>
+                            <select asp-for="EditUser.Role" class="form-select">
+                                @foreach (var role in Model.AvailableRoles)
+                                {
+                                    <option value="@role">@role</option>
+                                }
+                            </select>
+                            <span asp-validation-for="EditUser.Role" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-2">
+                            <label asp-for="EditUser.IsActive" class="form-label"></label>
+                            <select asp-for="EditUser.IsActive" class="form-select">
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                            <span asp-validation-for="EditUser.IsActive" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="EditUser.CompanyName" class="form-label"></label>
+                            <input asp-for="EditUser.CompanyName" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="EditUser.Department" class="form-label"></label>
+                            <input asp-for="EditUser.Department" class="form-control" />
+                        </div>
+                        <div class="col-md-12 mt-3">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <a class="btn btn-secondary ms-2" asp-page="./Users">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.SelectedResetPasswordUserId))
+        {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h4 class="card-title">Reset Password</h4>
+                    <form method="post" asp-page-handler="ResetPassword" class="row g-3">
+                        <input asp-for="ResetPassword.UserId" type="hidden" />
+                        <div class="col-md-4">
+                            <label asp-for="ResetPassword.NewPassword" class="form-label"></label>
+                            <input asp-for="ResetPassword.NewPassword" class="form-control" type="password" />
+                            <span asp-validation-for="ResetPassword.NewPassword" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="ResetPassword.ConfirmPassword" class="form-label"></label>
+                            <input asp-for="ResetPassword.ConfirmPassword" class="form-control" type="password" />
+                            <span asp-validation-for="ResetPassword.ConfirmPassword" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-12 mt-3">
+                            <button type="submit" class="btn btn-warning">Reset Password</button>
+                            <a class="btn btn-secondary ms-2" asp-page="./Users">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

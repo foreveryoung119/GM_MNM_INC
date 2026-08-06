@@ -1,0 +1,421 @@
+@page "{id:int}"
+@model ClaimDetailsModel
+@{
+    ViewData["Title"] = "Claim Details";
+}
+
+<div class="container-fluid mt-4">
+    @if (Model.Claim == null)
+    {
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-circle"></i> Claim not found.
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h2>Claim Details</h2>
+                <p class="text-muted">Claim Number: <strong>@Model.Claim.ClaimNumber</strong></p>
+            </div>
+            <div class="col-md-4 text-end">
+                @if ((User.IsInRole("Insurance Officer") || User.IsInRole("Admin")) && Model.Claim.Status != ClaimStatus.Cancelled && Model.Claim.Status != ClaimStatus.Closed)
+                {
+                    <a href="/Claims/AssessorAppointment/@Model.Claim.Id" class="btn btn-primary me-2">
+                        <i class="fas fa-user-check"></i> @(string.IsNullOrEmpty(Model.Claim.AssessorName) ? "Assign Assessor" : "Reassign Assessor")
+                    </a>
+                }
+                @if ((User.IsInRole("Assessor") || User.IsInRole("Admin")) && Model.Claim.Status != ClaimStatus.Cancelled && Model.Claim.Status != ClaimStatus.Closed)
+                {
+                    <a href="/Claims/DocumentSubmission/@Model.Claim.Id" class="btn btn-warning me-2">
+                        <i class="fas fa-upload"></i> Upload File/Report
+                    </a>
+                }
+                <a href="/Claims/Index" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Claims
+                </a>
+            </div>
+        </div>
+
+        <partial name="_ClaimWorkflowStages" model="Model.Claim.Status" />
+
+        <!-- Claim Status Section -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Claim Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Current Status</label>
+                        <div>
+                            <span class="badge @GetStatusBadgeClass(Model.Claim.Status)">
+                                @FormatStatus(Model.Claim.Status)
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Claim Number</label>
+                        <div><strong>@Model.Claim.ClaimNumber</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Incident Information Section -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Incident Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Incident Date</label>
+                        <div>@Model.Claim.IncidentDate.ToString()</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Intimation Date</label>
+                        <div>@Model.Claim.IntimationDate.ToString()</div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label class="form-label text-muted">Incident Description</label>
+                        <div>@Model.Claim.IncidentDescription</div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Location</label>
+                        <div>@(string.IsNullOrEmpty(Model.Claim.Location) ? "N/A" : Model.Claim.Location)</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Claim Type</label>
+                        <div>
+                            @if (string.IsNullOrWhiteSpace(Model.Claim.ClaimType))
+                            {
+                                <span>N/A</span>
+                            }
+                            else if (Model.Claim.ClaimType == "Other" && !string.IsNullOrWhiteSpace(Model.Claim.ClaimTypeOther))
+                            {
+                                <span>Other - @Model.Claim.ClaimTypeOther</span>
+                            }
+                            else
+                            {
+                                <span>@Model.Claim.ClaimType</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Policy Number</label>
+                        <div>@(string.IsNullOrEmpty(Model.Claim.PolicyNumber) ? "N/A" : Model.Claim.PolicyNumber)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial Information Section -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Financial Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Estimated Loss</label>
+                        <div>@(Model.Claim.EstimatedLoss > 0 ? string.Format("{0:N2}", Model.Claim.EstimatedLoss) : "N/A")</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Estimated Amount</label>
+                        <div>@(Model.Claim.EstimatedAmount > 0 ? string.Format("{0:N2}", Model.Claim.EstimatedAmount) : "N/A")</div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Deductible Amount</label>
+                        <div>@(Model.Claim.DeductibleAmount > 0 ? string.Format("{0:N2}", Model.Claim.DeductibleAmount) : "N/A")</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Settled Amount</label>
+                        <div>@(Model.Claim.SettledAmount > 0 ? string.Format("{0:N2}", Model.Claim.SettledAmount) : "N/A")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Claimant Information Section -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Claimant Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Reported Person Name</label>
+                        <div>@(string.IsNullOrEmpty(Model.Claim.ReportedPersonName) ? "N/A" : Model.Claim.ReportedPersonName)</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Contact Number</label>
+                        <div>@(string.IsNullOrEmpty(Model.Claim.ContactNumber) ? "N/A" : Model.Claim.ContactNumber)</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Allocated Broker</label>
+                        <div>
+                            @if (Model.Claim.BrokerUser != null)
+                            {
+                                <span>@Model.Claim.BrokerUser.FullName <span class="text-muted">(@Model.Claim.BrokerUser.Email)</span></span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not allocated</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Created Date</label>
+                        <div>@Model.Claim.CreatedDate.ToString()</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assessor Information Section -->
+        @if (!string.IsNullOrEmpty(Model.Claim.AssessorName))
+        {
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Assessor Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Assessor Name</label>
+                            <div>@Model.Claim.AssessorName</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Assessor Email</label>
+                            <div>@(string.IsNullOrEmpty(Model.Claim.AssessorEmail) ? "N/A" : Model.Claim.AssessorEmail)</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Assessor Phone</label>
+                            <div>@(string.IsNullOrEmpty(Model.Claim.AssessorPhone) ? "N/A" : Model.Claim.AssessorPhone)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Appointment Date</label>
+                            <div>@(Model.Claim.AppointmentDate.HasValue ? Model.Claim.AppointmentDate.Value.ToString() : "N/A")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Documents Section -->
+        @if (Model.Claim.Documents != null && Model.Claim.Documents.Count > 0)
+        {
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Documents (@Model.Claim.Documents.Count)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Type</th>
+                                    <th>Upload Date</th>
+                                    <th>Verified</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var doc in Model.Claim.Documents)
+                                {
+                                    <tr>
+                                        <td>@doc.FileName</td>
+                                        <td>@doc.DocumentType</td>
+                                        <td>@doc.UploadedDate.ToString()</td>
+                                        <td>
+                                            @if (doc.IsVerified)
+                                            {
+                                                <span class="badge bg-success">Verified</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning">Pending</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a asp-page="/Claims/DocumentSubmission"
+                                               asp-page-handler="Open"
+                                               asp-route-claimId="@Model.Claim.Id"
+                                               asp-route-documentId="@doc.Id"
+                                               class="btn btn-sm btn-outline-primary"
+                                               target="_blank"
+                                               rel="noopener noreferrer">
+                                                <i class="fas fa-eye"></i> View Attachment
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Settlements Section -->
+        @if (Model.Claim.Settlements != null && Model.Claim.Settlements.Count > 0)
+        {
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Settlements (@Model.Claim.Settlements.Count)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Proposed Amount</th>
+                                    <th>Approved Amount</th>
+                                    <th>Status</th>
+                                    <th>Created Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var settlement in Model.Claim.Settlements)
+                                {
+                                    <tr>
+                                        <td>@string.Format("{0:N2}", settlement.ProposedAmount)</td>
+                                        <td>@string.Format("{0:N2}", settlement.ApprovedAmount)</td>
+                                        <td>
+                                            <span class="badge @GetSettlementStatusBadgeClass(settlement.Status.ToString())">
+                                                @settlement.Status.ToString()
+                                            </span>
+                                        </td>
+                                        <td>@settlement.CreatedDate.ToString()</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Notes Section -->
+        @if (!string.IsNullOrEmpty(Model.Claim.Notes) || !string.IsNullOrEmpty(GetCleanRemarks(Model.Claim.Remarks)) || !string.IsNullOrEmpty(Model.Claim.AdditionalNotes))
+        {
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Notes</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.Claim.Notes))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Workflow Notes</label>
+                            <div>@Model.Claim.Notes</div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(GetCleanRemarks(Model.Claim.Remarks)))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Remarks</label>
+                            <div>@GetCleanRemarks(Model.Claim.Remarks)</div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Claim.AdditionalNotes))
+                    {
+                        <div>
+                            <label class="form-label text-muted">Additional Notes</label>
+                            <div>@Model.Claim.AdditionalNotes</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Action Buttons -->
+        <div class="mb-4">
+            @if ((User.IsInRole("Insurance Officer") || User.IsInRole("Admin")) && Model.Claim.Status != ClaimStatus.Cancelled && Model.Claim.Status != ClaimStatus.Closed)
+            {
+                <a href="/Claims/AssessorAppointment/@Model.Claim.Id" class="btn btn-primary me-2">
+                    <i class="fas fa-user-check"></i> @(string.IsNullOrEmpty(Model.Claim.AssessorName) ? "Assign Assessor" : "Reassign Assessor")
+                </a>
+            }
+            @if ((User.IsInRole("Assessor") || User.IsInRole("Admin")) && Model.Claim.Status != ClaimStatus.Cancelled && Model.Claim.Status != ClaimStatus.Closed)
+            {
+                <a href="/Claims/DocumentSubmission/@Model.Claim.Id" class="btn btn-warning me-2">
+                    <i class="fas fa-upload"></i> Upload File/Report
+                </a>
+            }
+            <a href="/Claims/Index" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Claims
+            </a>
+        </div>
+    }
+</div>
+
+@functions {
+    private string GetStatusBadgeClass(ClaimStatus? status)
+    {
+        return status switch
+        {
+            ClaimStatus.ClaimIntimation => "bg-secondary",
+            ClaimStatus.AssessorAppointed => "bg-primary",
+            ClaimStatus.DocumentsRequested => "bg-warning",
+            ClaimStatus.DocumentsSubmitted => "bg-info",
+            ClaimStatus.UnderNegotiation => "bg-warning",
+            ClaimStatus.DischargeVoucherPrepared => "bg-success",
+            ClaimStatus.PaymentReleased => "bg-success",
+            ClaimStatus.Closed => "bg-dark",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string FormatStatus(ClaimStatus? status)
+    {
+        return status switch
+        {
+            ClaimStatus.ClaimIntimation => "Claim Intimation",
+            ClaimStatus.AssessorAppointed => "Assessor Appointed",
+            ClaimStatus.DocumentsRequested => "Documents Requested",
+            ClaimStatus.DocumentsSubmitted => "Documents Submitted",
+            ClaimStatus.UnderNegotiation => "Under Negotiation",
+            ClaimStatus.DischargeVoucherPrepared => "DV Prepared",
+            ClaimStatus.PaymentReleased => "Payment Released",
+            ClaimStatus.Closed => "Closed",
+            _ => status?.ToString() ?? "Unknown"
+        };
+    }
+
+    private string GetSettlementStatusBadgeClass(string? status)
+    {
+        return status switch
+        {
+            "Pending" => "bg-warning",
+            "Approved" => "bg-success",
+            "Rejected" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetCleanRemarks(string? remarks)
+    {
+        if (string.IsNullOrWhiteSpace(remarks))
+        {
+            return string.Empty;
+        }
+
+        var cleaned = System.Text.RegularExpressions.Regex.Replace(remarks, @"\[REQDOCTEXT:[^\]]*\]", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\[REQDOCSTAT:[^\]]*\]", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return cleaned.Trim();
+    }
+}

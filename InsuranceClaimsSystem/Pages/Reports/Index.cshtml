@@ -1,0 +1,116 @@
+@page
+@model InsuranceClaimsSystem.Pages.Reports.IndexModel
+@{
+    ViewData["Title"] = "Reports";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Reports</h2>
+            <p class="text-muted">Claims reporting with filters and XLS export</p>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label" for="fromDate">From Date</label>
+                    <input type="date" class="form-control" id="fromDate" name="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="toDate">To Date</label>
+                    <input type="date" class="form-control" id="toDate" name="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="status">Status</label>
+                    <select id="status" name="status" class="form-select">
+                        @if (!Model.Status.HasValue)
+                        {
+                            <option value="" selected>All Statuses</option>
+                        }
+                        else
+                        {
+                            <option value="">All Statuses</option>
+                        }
+                        @foreach (var s in Model.Statuses)
+                        {
+                            if (Model.Status == s)
+                            {
+                                <option value="@s" selected>@s</option>
+                            }
+                            else
+                            {
+                                <option value="@s">@s</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                    <a asp-page="/Reports/Index" class="btn btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Claims Register (@Model.Claims.Count)</h5>
+                <a asp-page="/Reports/Index"
+                   asp-page-handler="Export"
+                   asp-route-fromDate="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+                   asp-route-toDate="@(Model.ToDate?.ToString("yyyy-MM-dd"))"
+                   asp-route-status="@Model.Status"
+                   class="btn btn-outline-success">
+                    <i class="fas fa-file-excel"></i> Export XLS
+                </a>
+            </div>
+
+            @if (!Model.Claims.Any())
+            {
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle"></i> No claims found for the selected filters.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Claim Number</th>
+                                <th>Reported Person</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Created Date</th>
+                                <th>Estimated Loss</th>
+                                <th>Approved</th>
+                                <th>Settled</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var claim in Model.Claims)
+                            {
+                                <tr>
+                                    <td><strong>@claim.ClaimNumber</strong></td>
+                                    <td>@claim.ReportedPersonName</td>
+                                    <td>@(string.IsNullOrWhiteSpace(claim.ClaimTypeOther) ? claim.ClaimType : $"{claim.ClaimType} - {claim.ClaimTypeOther}")</td>
+                                    <td><span class="badge bg-secondary">@claim.Status</span></td>
+                                    <td>@claim.CreatedDate.ToString("yyyy-MM-dd")</td>
+                                    <td>@claim.EstimatedLoss.ToString("N2")</td>
+                                    <td>@((claim.ApprovedAmount ?? 0m).ToString("N2"))</td>
+                                    <td>@((claim.SettledAmount ?? 0m).ToString("N2"))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

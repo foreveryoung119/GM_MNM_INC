@@ -1,0 +1,136 @@
+@page "{claimId:int}"
+@model AssessorAppointmentModel
+@{
+    ViewData["Title"] = "Assessor Appointment";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Step 2: Assessor Appointment</h2>
+            <p class="text-muted">Assign an assessor to evaluate the claim</p>
+        </div>
+    </div>
+
+    <partial name="_ClaimWorkflowStages" model="ClaimStatus.AssessorAppointed" />
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5>Claim Details</h5>
+                    <p><strong>Claim ID:</strong> @Model.Claim?.ClaimNumber</p>
+                    <p><strong>Description:</strong> @Model.Claim?.IncidentDescription</p>
+                    <p><strong>Location:</strong> @Model.Claim?.Location</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Incident Date:</strong> @Model.Claim?.IncidentDate.ToString("MMM dd, yyyy")</p>
+                    <p><strong>Estimated Loss:</strong> UGX @(Model.Claim?.EstimatedLoss.ToString("N0") ?? "N/A")</p>
+                    <p><strong>Status:</strong> <span class="badge bg-primary">@Model.Claim?.Status</span></p>
+                </div>
+            </div>
+
+            @if (User.IsInRole("Broker Company Officer"))
+            {
+                <div class="alert alert-info">
+                    <i class="fas fa-eye"></i> You have view-only access at this stage.
+                </div>
+            }
+
+            <hr />
+
+            <form method="post" id="assignAssessorForm">
+                <input type="hidden" name="claimId" value="@Model.Claim?.Id" />
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label asp-for="Input.SelectedAssessorId" class="form-label">Assessor <span class="text-danger">*</span></label>
+                        @if (!string.IsNullOrEmpty(Model.Claim?.AssessedById))
+                        {
+                            <div class="alert alert-info py-2 mb-2">
+                                <i class="fas fa-user-check me-1"></i> Currently assigned: <strong>@Model.Claim.AssessorName</strong> (@Model.Claim.AssessorEmail)
+                            </div>
+                        }
+                        <select asp-for="Input.SelectedAssessorId" class="form-select">
+                            <option value="">Select assessor</option>
+                            @foreach (var assessor in Model.AvailableAssessors)
+                            {
+                                <option value="@assessor.Id">@assessor.FullName (@assessor.Email)</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Input.SelectedAssessorId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Input.AppointmentDate" class="form-label">Appointment Date <span class="text-danger">*</span></label>
+                        <input asp-for="Input.AppointmentDate" class="form-control" type="date" />
+                        <span asp-validation-for="Input.AppointmentDate" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label asp-for="Input.AppointmentNotes" class="form-label">Appointment Notes</label>
+                        <textarea asp-for="Input.AppointmentNotes" class="form-control" rows="3" placeholder="Any special instructions for the assessor..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions-wrap">
+                    <p class="text-muted mb-2"><strong>Step Actions</strong></p>
+                <div class="form-actions" aria-label="Step actions">
+                    <button type="submit"
+                            class="btn btn-outline-secondary btn-lg"
+                            formaction="?handler=Skip"
+                            formmethod="post"
+                            formnovalidate
+                            onclick="return confirm('Skip assessor assignment and continue to the next step?');">
+                        <i class="fas fa-forward"></i> Skip Assessor
+                    </button>
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fas fa-user-check"></i> Assign Assessor
+                    </button>
+                    <a asp-page="/Claims/ClaimDetails" asp-route-id="@Model.Claim?.Id" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-arrow-left"></i> Back to Claim
+                    </a>
+                </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-actions-wrap {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.form-actions {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.form-actions .btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+@@media (max-width: 768px) {
+    .form-actions-wrap {
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}
+</style>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

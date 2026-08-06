@@ -1,0 +1,89 @@
+@using InsuranceClaimsSystem.Models
+@using InsuranceClaimsSystem.Utilities
+@model ClaimStatus
+@{
+    var currentStage = ClaimWorkflowHelper.GetCurrentStageNumber(Model);
+}
+
+<div class="claim-stage-strip mb-4">
+    @for (var i = 0; i < ClaimWorkflowHelper.StageLabels.Count; i++)
+    {
+        var stage = i + 1;
+        var stateClass = stage < currentStage
+            ? "stage-completed"
+            : stage == currentStage
+                ? "stage-active"
+                : "stage-pending";
+
+        <div class="claim-stage-item @stateClass">
+            <span class="claim-stage-pill">@stage</span>
+            <span class="claim-stage-label">@ClaimWorkflowHelper.StageLabels[i]</span>
+        </div>
+    }
+</div>
+
+<style>
+.claim-stage-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.claim-stage-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid #d1d9e0;
+    background: #f8f9fb;
+}
+
+.claim-stage-pill {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: #dee2e6;
+    color: #495057;
+}
+
+.claim-stage-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.claim-stage-item.stage-completed {
+    border-color: #9fd5b4;
+    background: #eefaf2;
+}
+
+.claim-stage-item.stage-completed .claim-stage-pill {
+    background: #2f9e44;
+    color: #fff;
+}
+
+.claim-stage-item.stage-active {
+    border-color: #74a4ff;
+    background: #edf3ff;
+}
+
+.claim-stage-item.stage-active .claim-stage-pill {
+    background: #2f6fed;
+    color: #fff;
+}
+
+.claim-stage-item.stage-pending {
+    opacity: 0.8;
+}
+
+@@media (max-width: 768px) {
+    .claim-stage-label {
+        font-size: 0.78rem;
+    }
+}
+</style>

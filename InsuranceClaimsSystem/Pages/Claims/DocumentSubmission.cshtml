@@ -1,0 +1,464 @@
+@page "{claimId:int}"
+@model DocumentSubmissionModel
+@{
+    ViewData["Title"] = "Document Submission";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Step 3: Document Submission</h2>
+            <p class="text-muted">Upload the required documents for assessment</p>
+        </div>
+    </div>
+
+    <partial name="_ClaimWorkflowStages" model="Model.Claim?.Status ?? ClaimStatus.ClaimIntimation" />
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            @if (Model.Claim != null)
+            {
+                <div class="alert alert-secondary">
+                    <strong>Claim:</strong> @Model.Claim.ClaimNumber
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+            {
+                <div class="alert alert-success">@Model.StatusMessage</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger">@Model.ErrorMessage</div>
+            }
+
+            @if (Model.UseRequestedDocumentWorkflow)
+            {
+                <div class="card border-0 bg-light mb-4">
+                    <div class="card-body">
+                        <h6 class="mb-3">Requested Documents Submission Status</h6>
+                        @if (Model.RequestedDocumentStatuses.Count == 0)
+                        {
+                            <p class="text-muted mb-0">There are no pending requested documents to upload.</p>
+                        }
+                        else
+                        {
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Requested Document</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.RequestedDocumentStatuses)
+                                    {
+                                        <tr>
+                                            <td>@item.DocumentName</td>
+                                            <td>
+                                                @if (item.Status == "Submitted")
+                                                {
+                                                    <span class="badge bg-success">Submitted</span>
+                                                }
+                                                else if (item.Status == "Not Available")
+                                                {
+                                                    <span class="badge bg-secondary">Not Available</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark">Not Submitted</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (item.Status == "Submitted" && Model.RequestedLatestDocumentIds.TryGetValue(item.DocumentName, out var requestedDocumentId))
+                                                {
+                                                    <a asp-page-handler="Open"
+                                                       asp-route-claimId="@Model.Claim?.Id"
+                                                       asp-route-documentId="@requestedDocumentId"
+                                                       class="btn btn-sm btn-outline-primary"
+                                                       target="_blank"
+                                                       rel="noopener noreferrer">
+                                                        <i class="fas fa-eye"></i> View
+                                                    </a>
+
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-warning ms-2 replace-requested-document-button"
+                                                            data-document-id="@requestedDocumentId"
+                                                            data-document-name="@item.DocumentName">
+                                                        <i class="fas fa-sync-alt"></i> Reload
+                                                    </button>
+                                                }
+                                                else if (Model.CanMarkNotAvailable && item.Status != "Submitted")
+                                                {
+                                                    <form method="post" asp-page-handler="SetNotAvailable" asp-route-claimId="@Model.Claim?.Id" class="d-inline">
+                                                        <input type="hidden" name="claimId" value="@Model.Claim?.Id" />
+                                                        <input type="hidden" name="documentName" value="@item.DocumentName" />
+                                                        <input type="hidden" name="isNotAvailable" value="@(item.Status != "Not Available")" />
+                                                        <button type="submit"
+                                                                class="btn btn-sm @(item.Status == "Not Available" ? "btn-outline-secondary" : "btn-outline-dark")">
+                                                            @(item.Status == "Not Available" ? "Mark Not Submitted" : "Mark Not Available")
+                                                        </button>
+                                                    </form>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted small">No actions</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="card border-0 bg-light mb-4">
+                    <div class="card-body">
+                        <h6 class="mb-3">Upload Requested Documents</h6>
+                        @if (Model.RequestedDocumentStatuses.Count == 0)
+                        {
+                            <p class="text-muted mb-0">No uploads are required at this step.</p>
+                        }
+                        <div class="requested-upload-list">
+                            @for (var i = 0; i < Model.RequestedDocumentStatuses.Count; i++)
+                            {
+                                var statusItem = Model.RequestedDocumentStatuses[i];
+                                if (statusItem.Status != "Submitted" && statusItem.Status != "Not Available")
+                                {
+                                    <form method="post" enctype="multipart/form-data" asp-page-handler="UploadRequestedSingle" class="requested-upload-row mb-3">
+                                        <input type="hidden" name="claimId" value="@Model.Claim?.Id" />
+                                        <input type="hidden" name="documentName" value="@statusItem.DocumentName" />
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold mb-0">@statusItem.DocumentName</label>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input type="file" class="form-control" name="file" accept=".pdf,.jpg,.png,.doc,.docx,.xls,.xlsx,.gif,.jpeg" required />
+                                            </div>
+                                            <div class="col-md-2 d-grid">
+                                                <button type="submit" class="btn btn-outline-primary">
+                                                    <i class="fas fa-upload"></i> Upload
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" id="requestedSubmissionForm" asp-page-handler="Requested">
+                    <input type="hidden" name="claimId" value="@Model.Claim?.Id" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="SubmissionNotes" class="form-label">Submission Notes</label>
+                            <textarea class="form-control" id="SubmissionNotes" name="SubmissionNotes" rows="3" placeholder="Any additional information about the documents..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-actions mb-4">
+                        <button type="submit" class="btn btn-warning btn-lg" @(Model.AllRequestedDocumentsResolved ? string.Empty : "disabled")>
+                            <i class="fas fa-check-circle"></i> Confirm and Continue
+                        </button>
+                        @if (Model.CanMarkNotAvailable)
+                        {
+                            <a href="/Claims/SettlementNegotiation/@Model.Claim?.Id" class="btn btn-success btn-lg @(Model.AllRequestedDocumentsResolved ? string.Empty : "disabled")" aria-disabled="@(!Model.AllRequestedDocumentsResolved)">
+                                <i class="fas fa-arrow-right"></i> Proceed to Step 3 (Negotiation)
+                            </a>
+                        }
+                        <a asp-page="/Claims/DocumentRequest" asp-route-claimId="@Model.Claim?.Id" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-arrow-left"></i> Back to Required Documents
+                        </a>
+                    </div>
+                </form>
+
+                <div class="alert @(Model.AllRequestedDocumentsResolved ? "alert-success" : "alert-info")">
+                    @if (Model.AllRequestedDocumentsResolved)
+                    {
+                        <span><i class="fas fa-check-circle"></i> All requested documents are resolved (Submitted or Not Available).</span>
+                        @if (Model.CanMarkNotAvailable)
+                        {
+                            <span> You can proceed to Step 3 to enter negotiated agreed amount.</span>
+                        }
+                    }
+                    else
+                    {
+                        <span><i class="fas fa-info-circle"></i> Use Upload or Mark Not Available on each line. Confirm and Continue is enabled only when all requested documents are Submitted or Not Available.</span>
+                    }
+                </div>
+
+                <form method="post" asp-page-handler="Replace" enctype="multipart/form-data" id="requestedReplaceForm" class="d-none">
+                    <input type="hidden" name="claimId" value="@Model.Claim?.Id" />
+                    <input type="hidden" id="requestedReplaceDocumentId" name="documentId" value="" />
+                    <input type="hidden" id="requestedReplaceNotes" name="replacementNotes" value="" />
+                    <input type="file" id="requestedReplaceFile" name="replacementFile" accept=".pdf,.jpg,.png,.doc,.docx,.xls,.xlsx,.gif,.jpeg" />
+                </form>
+            }
+            else
+            {
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="mb-3">Uploaded Documents</h6>
+                                @if (Model.UploadedDocumentTypes.Count == 0)
+                                {
+                                    <p class="text-muted mb-0">No required documents uploaded yet.</p>
+                                }
+                                else
+                                {
+                                    <ul class="list-unstyled mb-0">
+                                        @foreach (var type in Model.RequiredDocumentTypes.Where(t => Model.UploadedDocumentTypes.Contains(t)))
+                                        {
+                                            <li class="mb-1"><span class="text-success"><i class="fas fa-check-circle"></i></span> @type</li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="mb-3">Missing Documents</h6>
+                                @if (Model.MissingDocumentTypes.Count == 0)
+                                {
+                                    <p class="text-success mb-0"><i class="fas fa-check-circle"></i> All required documents are uploaded.</p>
+                                }
+                                else
+                                {
+                                    <ul class="list-unstyled mb-0">
+                                        @foreach (var type in Model.MissingDocumentTypes)
+                                        {
+                                            <li class="mb-1"><span class="text-danger"><i class="fas fa-times-circle"></i></span> @type</li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            @if (Model.ExistingDocuments.Count > 0)
+            {
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th>File Name</th>
+                                <th>Type</th>
+                                <th>Uploaded Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var document in Model.ExistingDocuments)
+                            {
+                                <tr>
+                                    <td>
+                                        <a asp-page-handler="Open"
+                                           asp-route-claimId="@Model.Claim?.Id"
+                                           asp-route-documentId="@document.Id"
+                                           target="_blank"
+                                           rel="noopener noreferrer">
+                                            @document.FileName@document.FileExtension
+                                        </a>
+                                    </td>
+                                    <td>@document.DocumentType</td>
+                                    <td>@document.UploadedDate.ToString("MMM dd, yyyy HH:mm")</td>
+                                    <td>
+                                        <div class="document-actions">
+                                            <a asp-page-handler="Open"
+                                               asp-route-claimId="@Model.Claim?.Id"
+                                               asp-route-documentId="@document.Id"
+                                               class="btn btn-sm btn-outline-primary"
+                                               target="_blank"
+                                               rel="noopener noreferrer">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+
+                                            <form method="post" asp-page-handler="Delete" class="d-inline">
+                                                <input type="hidden" name="claimId" value="@Model.Claim?.Id" />
+                                                <input type="hidden" name="documentId" value="@document.Id" />
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('Delete this document?');">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
+                                            </form>
+
+                                            <form method="post" asp-page-handler="Replace" enctype="multipart/form-data" class="replace-form">
+                                                <input type="hidden" name="claimId" value="@Model.Claim?.Id" />
+                                                <input type="hidden" name="documentId" value="@document.Id" />
+                                                <input type="file" name="replacementFile" class="form-control form-control-sm" accept=".pdf,.jpg,.png,.doc,.docx,.xls,.xlsx,.gif,.jpeg" required />
+                                                <input type="text" name="replacementNotes" class="form-control form-control-sm" placeholder="Replacement notes (optional)" />
+                                                <button type="submit" class="btn btn-sm btn-outline-warning">
+                                                    <i class="fas fa-sync-alt"></i> Replace
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+                <form method="post" enctype="multipart/form-data" id="documentSubmissionForm">
+                    <input type="hidden" name="claimId" value="@Model.Claim?.Id" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="upload-grid mb-3">
+                        <label for="DocumentType" class="form-label mb-1">Document Type <span class="text-danger">*</span></label>
+                        <label for="DocumentFile" class="form-label mb-1">Select Documents to Upload <span class="text-danger">*</span></label>
+                        <div></div>
+
+                        <select id="DocumentType" name="DocumentType" class="form-select" required>
+                            <option value="5" selected>Medical Report</option>
+                            <option value="2">Police Report</option>
+                            <option value="3">Photographs</option>
+                            <option value="4">Quotation</option>
+                            <option value="1">Invoice</option>
+                            <option value="6">Policy Document</option>
+                            <option value="7">Other</option>
+                        </select>
+
+                        <input type="file" class="form-control" id="DocumentFile" name="DocumentFile" multiple accept=".pdf,.jpg,.png,.doc,.docx" />
+
+                        <button type="submit" class="btn btn-warning upload-btn">
+                            <i class="fas fa-upload"></i> Upload
+                        </button>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="SubmissionNotes" class="form-label">Submission Notes</label>
+                            <textarea class="form-control" id="SubmissionNotes" name="SubmissionNotes" rows="3" placeholder="Any additional information about the documents..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> All required documents must be uploaded before proceeding to the next step.
+                    </div>
+
+                    <div class="form-actions">
+                        <a href="/Claims" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </a>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+.form-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 10px;
+}
+
+.upload-grid {
+    display: grid;
+    grid-template-columns: 4fr 6fr 2fr;
+    column-gap: 1rem;
+    row-gap: 0.25rem;
+    align-items: end;
+}
+
+.upload-grid .form-control,
+.upload-grid .form-select,
+.upload-grid .upload-btn {
+    height: 38px;
+}
+
+#DocumentFile + small,
+#DocumentFile ~ small.text-muted {
+    display: none !important;
+}
+
+.upload-grid .upload-btn {
+    white-space: nowrap;
+}
+
+#documentSubmissionForm .upload-controls-row,
+#documentSubmissionForm .row.g-3 {
+    align-items: end !important;
+}
+
+#documentSubmissionForm .upload-controls-row .btn,
+#documentSubmissionForm .row.g-3 .btn-warning {
+    min-height: 38px;
+    white-space: nowrap;
+}
+
+@@media (max-width: 767.98px) {
+    .upload-grid {
+        grid-template-columns: 1fr;
+        row-gap: 0.5rem;
+    }
+}
+
+.document-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.replace-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.replace-form .form-control-sm {
+    width: auto;
+    min-width: 180px;
+}
+</style>
+
+@section Scripts {
+    <script>
+        (function () {
+            const replaceForm = document.getElementById('requestedReplaceForm');
+            const replaceDocumentId = document.getElementById('requestedReplaceDocumentId');
+            const replaceNotes = document.getElementById('requestedReplaceNotes');
+            const replaceFileInput = document.getElementById('requestedReplaceFile');
+
+            if (!replaceForm || !replaceDocumentId || !replaceNotes || !replaceFileInput) {
+                return;
+            }
+
+            document.querySelectorAll('.replace-requested-document-button').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    replaceDocumentId.value = button.getAttribute('data-document-id') || '';
+                    replaceNotes.value = button.getAttribute('data-document-name') || '';
+                    replaceFileInput.value = '';
+                    replaceFileInput.click();
+                });
+            });
+
+            replaceFileInput.addEventListener('change', function () {
+                if (!replaceFileInput.files || replaceFileInput.files.length === 0) {
+                    return;
+                }
+
+                replaceForm.submit();
+            });
+        })();
+    </script>
+}

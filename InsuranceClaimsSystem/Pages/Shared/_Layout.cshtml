@@ -1,0 +1,118 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - GM Sugar Limited Insurance</title>
+    <link rel="icon" type="image/svg+xml" href="@(Url.Content("~/images/gm-favicon.svg"))?v=3" />
+    <link rel="shortcut icon" href="@(Url.Content("~/favicon.ico"))?v=3" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/InsuranceClaimsSystem.styles.css" asp-append-version="true" />
+</head>
+<body>
+    @{
+        var requestPath = Context?.Request?.Path.Value ?? string.Empty;
+        var currentPage = ViewContext?.RouteData?.Values["page"]?.ToString() ?? string.Empty;
+        var hideSidebarFromPage = ViewData["HideSidebar"] as bool? ?? false;
+        var isLoginPage =
+            string.Equals(requestPath, "/Account/Login", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(currentPage, "/Account/Login", StringComparison.OrdinalIgnoreCase);
+        var shouldHideSidebar = isLoginPage || hideSidebarFromPage;
+    }
+    <!-- Main Container with Sidebar -->
+    <div class="d-flex flex-column app-root">
+        <!-- Header -->
+        <header class="header-top bg-white border-bottom box-shadow">
+            <div class="container-fluid">
+                <div class="row align-items-center py-2">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <img src="@(Url.Content("~/images/gm-sugar-logo.svg"))" alt="GM Sugar Limited" class="me-3" style="height: 50px; width: auto;">
+                            <div>
+                                <h5 class="mb-0"><strong>GM Sugar Limited</strong></h5>
+                                <small class="text-muted">Insurance Department</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        @if (User?.Identity?.IsAuthenticated ?? false)
+                        {
+                            <span class="me-3">Welcome, <strong>@(User.Identity.Name)</strong></span>
+                            <form method="post" asp-page="/Account/Logout" class="d-inline">
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <a class="btn btn-success btn-sm" asp-page="/Account/Login">
+                                <i class="fas fa-sign-in-alt"></i> Login
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="d-flex flex-grow-1 layout-shell">
+            @if (!shouldHideSidebar)
+            {
+                <!-- Sidebar -->
+                <nav class="sidebar bg-sidebar" style="width: 200px; background-color: #2d8659;">
+                    <div class="sidebar-nav pt-3">
+                        <div class="nav flex-column">
+                            @if (!User.IsInRole("Broker Company Officer"))
+                            {
+                                <a class="nav-link active text-white d-flex align-items-center" asp-area="" asp-page="/Index">
+                                    <i class="fas fa-check-circle me-2"></i> Dashboard
+                                </a>
+                            }
+                            <a class="nav-link text-white d-flex align-items-center" asp-page="/Claims/Index">
+                                <i class="fas fa-file-alt me-2"></i> Claims
+                            </a>
+                            @if (!User.IsInRole("Broker Company Officer"))
+                            {
+                                <a class="nav-link text-white d-flex align-items-center" asp-page="/Claims/ClaimIntimation">
+                                    <i class="fas fa-plus-circle me-2"></i> New Claim
+                                </a>
+                            }
+                            <a class="nav-link text-white d-flex align-items-center" asp-page="/Reports/Index">
+                                <i class="fas fa-chart-bar me-2"></i> Reports
+                            </a>
+                            @if ((User?.Identity?.IsAuthenticated ?? false) && string.Equals(User.Identity?.Name, "admin@gmsugar.local", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <a class="nav-link text-white d-flex align-items-center" href="#settings">
+                                    <i class="fas fa-cog me-2"></i> Settings
+                                </a>
+                                <a class="nav-link text-white d-flex align-items-center" asp-page="/Admin/Users">
+                                    <i class="fas fa-users-cog me-2"></i> User Management
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </nav>
+            }
+
+            <!-- Main Content -->
+            <main class="flex-grow-1 p-4 app-main-content" style="background-color: #f5f5f5;">
+                @RenderBody()
+            </main>
+        </div>
+
+        <footer class="footer border-top bg-white text-muted">
+            <p class="footer-text">&copy; 2026 - GM Sugar Limited Insurance Department. All rights reserved.</p>
+        </footer>
+
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

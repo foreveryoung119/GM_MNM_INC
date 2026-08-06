@@ -1,0 +1,113 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.sln.docstates
+
+# User-specific files
+*.rsuser
+*.suo
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.VC.opendb
+
+# Test Results
+TestResults/
+*.trx
+*.coverage
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# Local History for Visual Studio
+.localhistory/
+
+# Entity Framework
+Migrations/
+
+# Database
+*.mdf
+*.ldf
+*.ndf
+
+# Environment variables
+.env
+.env.local
+appsettings.Development.json
+
+# IDE-specific files
+.idea/
+*.iml
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+publish/
+PublishProfiles/
+
+# NuGet
+.nuget/
+
+# Azure
+.azure/
+
+# Application insights
+appsettings.*.json
+
+# Uploaded files/documents
+InsuranceClaimsSystem/wwwroot/uploads/*
+!InsuranceClaimsSystem/wwwroot/uploads/.gitkeep
+
+# SSL certificates in development
+*.pfx
+*.pem
+*.key
+
+# dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/

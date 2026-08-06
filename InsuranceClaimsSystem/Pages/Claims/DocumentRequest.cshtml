@@ -1,0 +1,125 @@
+@page "{claimId:int}"
+@model DocumentRequestModel
+@{
+    ViewData["Title"] = "Document Request";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Step 3: Document Request</h2>
+            <p class="text-muted">Request required documents from the claimant</p>
+        </div>
+    </div>
+
+    <partial name="_ClaimWorkflowStages" model="ClaimStatus.DocumentsRequested" />
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <form method="post" id="documentRequestForm">
+                <input type="hidden" name="claimId" value="@RouteData.Values["claimId"]" />
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                <h5 class="mb-3">Required Documents</h5>
+                <div class="documents-list" id="requestedDocumentsContainer">
+                    @for (var i = 0; i < Model.RequestedDocumentNames.Count; i++)
+                    {
+                        <div class="input-group mb-2 requested-document-row">
+                            <input type="text" class="form-control" name="RequestedDocuments" value="@Model.RequestedDocumentNames[i]" placeholder="Enter required document name" />
+                            <button type="button" class="btn btn-outline-danger remove-document" aria-label="Remove document" @(Model.RequestedDocumentNames.Count == 1 ? "style=\"display: none;\"" : string.Empty)>
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    }
+                </div>
+                <button type="button" id="addDocumentButton" class="btn btn-outline-primary btn-sm mt-2">
+                    <i class="fas fa-plus"></i> Add Document
+                </button>
+
+                <div class="row mt-4">
+                    <div class="col-md-12 mb-3">
+                        <label for="RequestNotes" class="form-label">Communication Message</label>
+                        <textarea class="form-control" id="RequestNotes" name="RequestNotes" rows="3" placeholder="Message to be sent to claimant regarding document submission..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fas fa-check-circle"></i> Confirm Document Request
+                    </button>
+                    <a asp-page="/Claims/AssessorAppointment" asp-route-claimId="@RouteData.Values["claimId"]" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-arrow-left"></i> Back to Assessor
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.documents-list {
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.form-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 10px;
+}
+</style>
+
+@section Scripts {
+    <script>
+        (function () {
+            const container = document.getElementById('requestedDocumentsContainer');
+            const addButton = document.getElementById('addDocumentButton');
+
+            if (!container || !addButton) {
+                return;
+            }
+
+            const updateRemoveButtons = function () {
+                const rows = container.querySelectorAll('.requested-document-row');
+                rows.forEach(function (row, index) {
+                    const removeButton = row.querySelector('.remove-document');
+                    if (removeButton) {
+                        removeButton.style.display = rows.length > 1 ? '' : 'none';
+                    }
+                });
+            };
+
+            const createRow = function () {
+                const row = document.createElement('div');
+                row.className = 'input-group mb-2 requested-document-row';
+                row.innerHTML = '<input type="text" class="form-control" name="RequestedDocuments" placeholder="Enter required document name" />'
+                    + '<button type="button" class="btn btn-outline-danger remove-document" aria-label="Remove document">'
+                    + '<i class="fas fa-times"></i></button>';
+                return row;
+            };
+
+            addButton.addEventListener('click', function () {
+                container.appendChild(createRow());
+                updateRemoveButtons();
+            });
+
+            container.addEventListener('click', function (event) {
+                const target = event.target.closest('.remove-document');
+                if (!target) {
+                    return;
+                }
+
+                const row = target.closest('.requested-document-row');
+                if (row) {
+                    row.remove();
+                    updateRemoveButtons();
+                }
+            });
+
+            updateRemoveButtons();
+        })();
+    </script>
+}
