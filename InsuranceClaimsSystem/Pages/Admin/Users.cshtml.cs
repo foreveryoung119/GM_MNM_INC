@@ -11,7 +11,6 @@ namespace InsuranceClaimsSystem.Pages.Admin;
 [Authorize(Roles = "Admin")]
 public class UsersModel : PageModel
 {
-    private const string SeedAdminEmail = "admin@gmsugar.local";
     private readonly IUserService _userService;
 
     public UsersModel(IUserService userService)
@@ -238,7 +237,7 @@ public class UsersModel : PageModel
 
     private bool IsSeedAdminUser()
     {
-        return string.Equals(User.Identity?.Name, SeedAdminEmail, StringComparison.OrdinalIgnoreCase);
+        return User.IsInRole("Admin");
     }
 
     public class NewUserInput

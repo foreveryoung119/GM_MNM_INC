@@ -83,7 +83,7 @@
                             <a class="nav-link text-white d-flex align-items-center" asp-page="/Reports/Index">
                                 <i class="fas fa-chart-bar me-2"></i> Reports
                             </a>
-                            @if ((User?.Identity?.IsAuthenticated ?? false) && string.Equals(User.Identity?.Name, "admin@gmsugar.local", StringComparison.OrdinalIgnoreCase))
+                            @if (User.IsInRole("Admin"))
                             {
                                 <a class="nav-link text-white d-flex align-items-center" href="#settings">
                                     <i class="fas fa-cog me-2"></i> Settings
