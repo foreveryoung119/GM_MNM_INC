@@ -60,9 +60,20 @@ public class DocumentService : IDocumentService
             var filePath = Path.Combine(_uploadsDirectory, fileName);
 
             // Save file securely
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            try
             {
+                using var stream = new FileStream(filePath, FileMode.Create);
                 await file.CopyToAsync(stream);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogError(ex, "Upload write access denied for path {FilePath}", filePath);
+                throw new InvalidOperationException("Upload failed: the server could not write the file. Please contact support.");
+            }
+            catch (IOException ex)
+            {
+                _logger.LogError(ex, "Upload IO error for path {FilePath}", filePath);
+                throw new InvalidOperationException("Upload failed due to a storage error. Please try again.");
             }
 
             // Create document record

@@ -131,6 +131,22 @@ namespace InsuranceClaimsSystem.Pages.Claims
 
                 return RedirectToPage("/Claims/PaymentPOP", new { claimId });
             }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Validation failed while submitting discharge voucher for claim {ClaimId}", claimId);
+                ModelState.AddModelError(string.Empty, ex.Message);
+                Claim = claim;
+                await LoadUploadedDischargeVoucherAsync(claimId);
+                return Page();
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Invalid operation while submitting discharge voucher for claim {ClaimId}", claimId);
+                ModelState.AddModelError(string.Empty, ex.Message);
+                Claim = claim;
+                await LoadUploadedDischargeVoucherAsync(claimId);
+                return Page();
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while submitting discharge voucher for claim {ClaimId}", claimId);
@@ -193,6 +209,22 @@ namespace InsuranceClaimsSystem.Pages.Claims
 
                 StatusMessage = "Discharge voucher uploaded successfully.";
                 return RedirectToPage(new { claimId });
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Validation failed while uploading discharge voucher for claim {ClaimId}", claimId);
+                ModelState.AddModelError(string.Empty, ex.Message);
+                Claim = claim;
+                await LoadUploadedDischargeVoucherAsync(claimId);
+                return Page();
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Invalid operation while uploading discharge voucher for claim {ClaimId}", claimId);
+                ModelState.AddModelError(string.Empty, ex.Message);
+                Claim = claim;
+                await LoadUploadedDischargeVoucherAsync(claimId);
+                return Page();
             }
             catch (Exception ex)
             {

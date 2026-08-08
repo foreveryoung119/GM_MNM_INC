@@ -15,6 +15,7 @@ namespace InsuranceClaimsSystem.Pages.Claims
     {
         private readonly IClaimService _claimService;
         private readonly IDocumentService _documentService;
+        private readonly ILogger<DocumentSubmissionModel> _logger;
         private const string RequestedDocsTokenPattern = @"\[REQDOCS:([^\]]*)\]";
         private const string RequestedDocsTextTokenPattern = @"\[REQDOCTEXT:([^\]]*)\]";
         private const string RequestedDocsStatusTokenPattern = @"\[REQDOCSTAT:([^\]]*)\]";
@@ -22,10 +23,11 @@ namespace InsuranceClaimsSystem.Pages.Claims
         private const string RequestedStatusNotSubmitted = "Not Submitted";
         private const string RequestedStatusNotAvailable = "Not Available";
 
-        public DocumentSubmissionModel(IClaimService claimService, IDocumentService documentService)
+        public DocumentSubmissionModel(IClaimService claimService, IDocumentService documentService, ILogger<DocumentSubmissionModel> logger)
         {
             _claimService = claimService;
             _documentService = documentService;
+            _logger = logger;
         }
 
         public InsuranceClaim? Claim { get; set; }
@@ -84,76 +86,76 @@ namespace InsuranceClaimsSystem.Pages.Claims
             DocumentType DocumentType,
             string SubmissionNotes)
         {
-            var claim = await _claimService.GetClaimByIdAsync(claimId);
-            if (claim == null)
+            try
             {
-                return NotFound();
-            }
+                var claim = await _claimService.GetClaimByIdAsync(claimId);
+                if (claim == null)
+                {
+                    return NotFound();
+                }
 
-            if (!CanAccessClaim(claim))
-            {
-                return Forbid();
-            }
+                if (!CanAccessClaim(claim))
+                {
+                    return Forbid();
+                }
 
-            PopulateRequiredDocumentTypesFromClaim(claim);
-            PopulateRequestedDocumentProgress();
-
-            if (DocumentFile == null || DocumentFile.Count == 0)
-            {
-                ModelState.AddModelError(string.Empty, "Please upload at least one document.");
-                Claim = claim;
-                ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
-                PopulateChecklistFromExistingDocuments();
+                PopulateRequiredDocumentTypesFromClaim(claim);
                 PopulateRequestedDocumentProgress();
-                return Page();
-            }
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Forbid();
-            }
+                if (DocumentFile == null || DocumentFile.Count == 0)
+                {
+                    ModelState.AddModelError(string.Empty, "Please upload at least one document.");
+                    Claim = claim;
+                    ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
+                    PopulateChecklistFromExistingDocuments();
+                    PopulateRequestedDocumentProgress();
+                    return Page();
+                }
 
-            foreach (var file in DocumentFile)
-            {
-                try
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Forbid();
+                }
+
+                foreach (var file in DocumentFile)
                 {
                     await _documentService.UploadDocumentAsync(claimId, file, DocumentType, SubmissionNotes ?? string.Empty, userId);
                 }
-                catch (ArgumentException ex)
+
+                ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
+                PopulateChecklistFromExistingDocuments();
+
+                claim.Status = ClaimStatus.DocumentsSubmitted;
+                claim.DocumentSubmissionDate = DateTime.UtcNow;
+                claim.Notes = SubmissionNotes ?? string.Empty;
+                await _claimService.UpdateClaimAsync(claim);
+
+                if (MissingDocumentTypes.Count == 0)
                 {
-                    ModelState.AddModelError(string.Empty, ex.Message);
-                    Claim = claim;
-                    ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
-                    PopulateChecklistFromExistingDocuments();
-                    PopulateRequestedDocumentProgress();
-                    return Page();
+                    StatusMessage = "All required documents are uploaded. Admin or Insurance Officer can proceed to negotiation.";
                 }
-                catch (InvalidOperationException ex)
-                {
-                    ModelState.AddModelError(string.Empty, ex.Message);
-                    Claim = claim;
-                    ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
-                    PopulateChecklistFromExistingDocuments();
-                    PopulateRequestedDocumentProgress();
-                    return Page();
-                }
+
+                return RedirectToPage(new { claimId });
             }
-
-            ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
-            PopulateChecklistFromExistingDocuments();
-
-            claim.Status = ClaimStatus.DocumentsSubmitted;
-            claim.DocumentSubmissionDate = DateTime.UtcNow;
-            claim.Notes = SubmissionNotes ?? string.Empty;
-            await _claimService.UpdateClaimAsync(claim);
-
-            if (MissingDocumentTypes.Count == 0)
+            catch (ArgumentException ex)
             {
-                StatusMessage = "All required documents are uploaded. Admin or Insurance Officer can proceed to negotiation.";
+                _logger.LogWarning(ex, "Validation failed while uploading documents for claim {ClaimId}", claimId);
+                ModelState.AddModelError(string.Empty, ex.Message);
+                return await ReloadPageAsync(claimId);
             }
-
-            return RedirectToPage(new { claimId });
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Invalid operation while uploading documents for claim {ClaimId}", claimId);
+                ModelState.AddModelError(string.Empty, ex.Message);
+                return await ReloadPageAsync(claimId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while uploading documents for claim {ClaimId}", claimId);
+                ModelState.AddModelError(string.Empty, "Unable to upload documents right now. Please try again.");
+                return await ReloadPageAsync(claimId);
+            }
         }
 
         public async Task<IActionResult> OnPostRequestedAsync(int claimId, string SubmissionNotes)
@@ -217,83 +219,91 @@ namespace InsuranceClaimsSystem.Pages.Claims
 
         public async Task<IActionResult> OnPostUploadRequestedSingleAsync(int claimId, string documentName, IFormFile? file, string? SubmissionNotes)
         {
-            var claim = await _claimService.GetClaimByIdAsync(claimId);
-            if (claim == null)
-            {
-                return NotFound();
-            }
-
-            if (!CanAccessClaim(claim))
-            {
-                return Forbid();
-            }
-
-            Claim = claim;
-
-            var trimmedName = (documentName ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(trimmedName))
-            {
-                ErrorMessage = "Missing requested document name.";
-                return RedirectToPage(new { claimId });
-            }
-
-            trimmedName = NormalizeRequestedDocumentName(trimmedName);
-
-            if (file == null || file.Length == 0)
-            {
-                ErrorMessage = $"Please choose a file for '{trimmedName}'.";
-                return RedirectToPage(new { claimId });
-            }
-
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Forbid();
-            }
-
             try
             {
+                var claim = await _claimService.GetClaimByIdAsync(claimId);
+                if (claim == null)
+                {
+                    return NotFound();
+                }
+
+                if (!CanAccessClaim(claim))
+                {
+                    return Forbid();
+                }
+
+                Claim = claim;
+
+                var trimmedName = (documentName ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(trimmedName))
+                {
+                    ErrorMessage = "Missing requested document name.";
+                    return RedirectToPage(new { claimId });
+                }
+
+                trimmedName = NormalizeRequestedDocumentName(trimmedName);
+
+                if (file == null || file.Length == 0)
+                {
+                    ErrorMessage = $"Please choose a file for '{trimmedName}'.";
+                    return RedirectToPage(new { claimId });
+                }
+
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Forbid();
+                }
+
                 await _documentService.UploadDocumentAsync(
                     claimId,
                     file,
                     DocumentType.Other,
                     trimmedName,
                     userId);
+
+                ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
+                PopulateRequiredDocumentTypesFromClaim(claim);
+                PopulateChecklistFromExistingDocuments();
+                PopulateRequestedDocumentProgress();
+
+                var statusMap = GetRequestedDocumentStatusMap(claim.Remarks);
+                foreach (var status in RequestedDocumentStatuses)
+                {
+                    statusMap[status.DocumentName] = status.Status;
+                }
+
+                claim.Remarks = UpsertRequestedDocumentStatusToken(claim.Remarks, statusMap);
+                claim.DocumentSubmissionDate = DateTime.UtcNow;
+                if (!string.IsNullOrWhiteSpace(SubmissionNotes))
+                {
+                    claim.Notes = SubmissionNotes;
+                }
+
+                claim.Status = ClaimStatus.DocumentsSubmitted;
+                await _claimService.UpdateClaimAsync(claim);
+
+                StatusMessage = $"Uploaded '{trimmedName}'.";
+                return RedirectToPage(new { claimId });
             }
             catch (ArgumentException ex)
             {
+                _logger.LogWarning(ex, "Validation failed while uploading requested document for claim {ClaimId}", claimId);
                 ErrorMessage = ex.Message;
                 return RedirectToPage(new { claimId });
             }
             catch (InvalidOperationException ex)
             {
+                _logger.LogWarning(ex, "Invalid operation while uploading requested document for claim {ClaimId}", claimId);
                 ErrorMessage = ex.Message;
                 return RedirectToPage(new { claimId });
             }
-
-            ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
-            PopulateRequiredDocumentTypesFromClaim(claim);
-            PopulateChecklistFromExistingDocuments();
-            PopulateRequestedDocumentProgress();
-
-            var statusMap = GetRequestedDocumentStatusMap(claim.Remarks);
-            foreach (var status in RequestedDocumentStatuses)
+            catch (Exception ex)
             {
-                statusMap[status.DocumentName] = status.Status;
+                _logger.LogError(ex, "Unexpected error while uploading requested document for claim {ClaimId}", claimId);
+                ErrorMessage = "Unable to upload the document right now. Please try again.";
+                return RedirectToPage(new { claimId });
             }
-
-            claim.Remarks = UpsertRequestedDocumentStatusToken(claim.Remarks, statusMap);
-            claim.DocumentSubmissionDate = DateTime.UtcNow;
-            if (!string.IsNullOrWhiteSpace(SubmissionNotes))
-            {
-                claim.Notes = SubmissionNotes;
-            }
-
-            claim.Status = ClaimStatus.DocumentsSubmitted;
-            await _claimService.UpdateClaimAsync(claim);
-
-            StatusMessage = $"Uploaded '{trimmedName}'.";
-            return RedirectToPage(new { claimId });
         }
 
         public async Task<IActionResult> OnPostSetNotAvailableAsync(int claimId, string documentName, bool isNotAvailable)
@@ -813,6 +823,20 @@ namespace InsuranceClaimsSystem.Pages.Claims
             }
 
             return Regex.Replace(name.Trim(), @"\s+", " ");
+        }
+
+        private async Task<IActionResult> ReloadPageAsync(int claimId)
+        {
+            Claim = await _claimService.GetClaimByIdAsync(claimId);
+            if (Claim != null)
+            {
+                ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
+                PopulateRequiredDocumentTypesFromClaim(Claim);
+                PopulateChecklistFromExistingDocuments();
+                PopulateRequestedDocumentProgress();
+            }
+
+            return Page();
         }
 
         public class RequestedUploadInput

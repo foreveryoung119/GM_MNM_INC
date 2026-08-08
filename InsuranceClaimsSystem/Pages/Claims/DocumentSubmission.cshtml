@@ -171,7 +171,7 @@
                         @if (Model.CanMarkNotAvailable)
                         {
                             <a href="/Claims/SettlementNegotiation/@Model.Claim?.Id" class="btn btn-success btn-lg @(Model.AllRequestedDocumentsResolved ? string.Empty : "disabled")" aria-disabled="@(!Model.AllRequestedDocumentsResolved)">
-                                <i class="fas fa-arrow-right"></i> Proceed to Step 3 (Negotiation)
+                                <i class="fas fa-arrow-right"></i> Proceed to Step 4: Settlement Negotiation
                             </a>
                         }
                         <a asp-page="/Claims/DocumentRequest" asp-route-claimId="@Model.Claim?.Id" class="btn btn-secondary btn-lg">
