@@ -53,6 +53,12 @@ namespace InsuranceClaimsSystem.Pages.Claims
                 return Forbid();
             }
 
+            if (Claim.EstimatedLoss <= 0)
+            {
+                TempData["ErrorMessage"] = "Set an Estimated Loss Amount greater than zero in Step 3 before proceeding to Step 4.";
+                return RedirectToPage("/Claims/DocumentSubmission", new { claimId });
+            }
+
             CurrentNegotiationStatus = Claim.Settlements
                 .OrderByDescending(settlement => settlement.CreatedDate)
                 .Select(settlement => settlement.Status)

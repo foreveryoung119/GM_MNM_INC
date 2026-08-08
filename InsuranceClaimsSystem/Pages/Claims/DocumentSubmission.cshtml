@@ -155,7 +155,16 @@
 
                 <form method="post" id="requestedSubmissionForm" asp-page-handler="Requested">
                     <input type="hidden" name="claimId" value="@Model.Claim?.Id" />
+                    <input asp-for="EstimatedLossInput" type="hidden" />
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="estimatedLossDisplayRequested" class="form-label">Estimated Loss Amount (UGX) <span class="text-danger">*</span></label>
+                            <input id="estimatedLossDisplayRequested" class="form-control" type="text" inputmode="decimal" placeholder="0" value="@(Model.Claim != null && Model.Claim.EstimatedLoss > 0 ? Model.Claim.EstimatedLoss.ToString("N2") : string.Empty)" />
+                            <small class="text-muted">Required before proceeding to Step 4.</small>
+                        </div>
+                    </div>
 
                     <div class="row">
                         <div class="col-md-12 mb-3">
@@ -166,14 +175,8 @@
 
                     <div class="form-actions mb-4">
                         <button type="submit" class="btn btn-warning btn-lg" @(Model.AllRequestedDocumentsResolved ? string.Empty : "disabled")>
-                            <i class="fas fa-check-circle"></i> Confirm and Continue
+                            <i class="fas fa-arrow-right"></i> @(Model.CanMarkNotAvailable ? "Proceed to Step 4: Settlement Negotiation" : "Confirm and Continue")
                         </button>
-                        @if (Model.CanMarkNotAvailable)
-                        {
-                            <a href="/Claims/SettlementNegotiation/@Model.Claim?.Id" class="btn btn-success btn-lg @(Model.AllRequestedDocumentsResolved ? string.Empty : "disabled")" aria-disabled="@(!Model.AllRequestedDocumentsResolved)">
-                                <i class="fas fa-arrow-right"></i> Proceed to Step 4: Settlement Negotiation
-                            </a>
-                        }
                         <a asp-page="/Claims/DocumentRequest" asp-route-claimId="@Model.Claim?.Id" class="btn btn-secondary btn-lg">
                             <i class="fas fa-arrow-left"></i> Back to Required Documents
                         </a>
@@ -315,7 +318,16 @@
 
                 <form method="post" enctype="multipart/form-data" id="documentSubmissionForm">
                     <input type="hidden" name="claimId" value="@Model.Claim?.Id" />
+                    <input asp-for="EstimatedLossInput" type="hidden" />
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="estimatedLossDisplayNormal" class="form-label">Estimated Loss Amount (UGX) <span class="text-danger">*</span></label>
+                            <input id="estimatedLossDisplayNormal" class="form-control" type="text" inputmode="decimal" placeholder="0" value="@(Model.Claim != null && Model.Claim.EstimatedLoss > 0 ? Model.Claim.EstimatedLoss.ToString("N2") : string.Empty)" />
+                            <small class="text-muted">Required before proceeding to Step 4.</small>
+                        </div>
+                    </div>
 
                     <div class="upload-grid mb-3">
                         <label for="DocumentType" class="form-label mb-1">Document Type <span class="text-danger">*</span></label>
@@ -438,6 +450,69 @@
             const replaceDocumentId = document.getElementById('requestedReplaceDocumentId');
             const replaceNotes = document.getElementById('requestedReplaceNotes');
             const replaceFileInput = document.getElementById('requestedReplaceFile');
+            const estimatedLossHidden = document.getElementById('EstimatedLossInput');
+            const estimatedLossInputs = [
+                document.getElementById('estimatedLossDisplayRequested'),
+                document.getElementById('estimatedLossDisplayNormal')
+            ].filter(Boolean);
+
+            const sanitizeAmount = function (value) {
+                const cleaned = (value || '').replace(/,/g, '').replace(/[^\d.]/g, '');
+                const parts = cleaned.split('.');
+                if (parts.length <= 1) {
+                    return cleaned;
+                }
+
+                return parts[0] + '.' + parts.slice(1).join('');
+            };
+
+            const formatAmount = function (value) {
+                const sanitized = sanitizeAmount(value);
+                if (!sanitized) {
+                    return '';
+                }
+
+                const parts = sanitized.split('.');
+                const integerPart = parts[0].replace(/^0+(?=\d)/, '');
+                const decimalPart = parts[1] || '';
+                const formattedInteger = (integerPart || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+                return decimalPart ? formattedInteger + '.' + decimalPart.slice(0, 2) : formattedInteger;
+            };
+
+            const syncEstimatedLossHidden = function (sourceInput) {
+                if (!estimatedLossHidden || !sourceInput) {
+                    return;
+                }
+
+                estimatedLossHidden.value = sanitizeAmount(sourceInput.value);
+            };
+
+            const syncPeerInputs = function (sourceInput) {
+                estimatedLossInputs.forEach(function (input) {
+                    if (input !== sourceInput) {
+                        input.value = sourceInput.value;
+                    }
+                });
+            };
+
+            estimatedLossInputs.forEach(function (input) {
+                input.addEventListener('input', function () {
+                    input.value = formatAmount(input.value);
+                    syncEstimatedLossHidden(input);
+                    syncPeerInputs(input);
+                });
+
+                input.addEventListener('blur', function () {
+                    input.value = formatAmount(input.value);
+                    syncEstimatedLossHidden(input);
+                    syncPeerInputs(input);
+                });
+            });
+
+            if (estimatedLossInputs.length > 0) {
+                syncEstimatedLossHidden(estimatedLossInputs[0]);
+            }
 
             if (!replaceForm || !replaceDocumentId || !replaceNotes || !replaceFileInput) {
                 return;

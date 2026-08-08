@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Text;
+using System.Globalization;
 
 namespace InsuranceClaimsSystem.Pages.Claims
 {
@@ -40,6 +41,9 @@ namespace InsuranceClaimsSystem.Pages.Claims
 
         [BindProperty]
         public List<RequestedUploadInput> RequestedUploads { get; set; } = new();
+
+        [BindProperty]
+        public string EstimatedLossInput { get; set; } = string.Empty;
 
         public List<ClaimDocument> ExistingDocuments { get; set; } = new();
 
@@ -101,6 +105,7 @@ namespace InsuranceClaimsSystem.Pages.Claims
 
                 PopulateRequiredDocumentTypesFromClaim(claim);
                 PopulateRequestedDocumentProgress();
+                SetEstimatedLossInputFromClaim(claim);
 
                 if (DocumentFile == null || DocumentFile.Count == 0)
                 {
@@ -109,6 +114,7 @@ namespace InsuranceClaimsSystem.Pages.Claims
                     ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
                     PopulateChecklistFromExistingDocuments();
                     PopulateRequestedDocumentProgress();
+                    SetEstimatedLossInputFromClaim(claim);
                     return Page();
                 }
 
@@ -177,6 +183,7 @@ namespace InsuranceClaimsSystem.Pages.Claims
             ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
             PopulateChecklistFromExistingDocuments();
             PopulateRequestedDocumentProgress();
+            SetEstimatedLossInputFromClaim(claim);
 
             if (!AllRequestedDocumentsResolved)
             {
@@ -188,6 +195,12 @@ namespace InsuranceClaimsSystem.Pages.Claims
                 ErrorMessage = unresolvedItems.Count > 0
                     ? $"Upload all requested documents or mark them Not Available before submitting. Pending: {string.Join(", ", unresolvedItems)}."
                     : "Upload all requested documents or mark them Not Available before submitting.";
+                return RedirectToPage(new { claimId });
+            }
+
+            if (!TryApplyEstimatedLoss(claim, out var estimatedLossValidationMessage))
+            {
+                ErrorMessage = estimatedLossValidationMessage;
                 return RedirectToPage(new { claimId });
             }
 
@@ -607,6 +620,7 @@ namespace InsuranceClaimsSystem.Pages.Claims
             PopulateRequiredDocumentTypesFromClaim(Claim);
             PopulateChecklistFromExistingDocuments();
             PopulateRequestedDocumentProgress();
+            SetEstimatedLossInputFromClaim(Claim);
 
             return Page();
         }
@@ -834,9 +848,34 @@ namespace InsuranceClaimsSystem.Pages.Claims
                 PopulateRequiredDocumentTypesFromClaim(Claim);
                 PopulateChecklistFromExistingDocuments();
                 PopulateRequestedDocumentProgress();
+                SetEstimatedLossInputFromClaim(Claim);
             }
 
             return Page();
+        }
+
+        private void SetEstimatedLossInputFromClaim(InsuranceClaim claim)
+        {
+            EstimatedLossInput = claim.EstimatedLoss > 0
+                ? claim.EstimatedLoss.ToString(CultureInfo.InvariantCulture)
+                : string.Empty;
+        }
+
+        private bool TryApplyEstimatedLoss(InsuranceClaim claim, out string? validationMessage)
+        {
+            validationMessage = null;
+
+            var normalized = (EstimatedLossInput ?? string.Empty).Trim().Replace(",", string.Empty);
+            if (string.IsNullOrWhiteSpace(normalized) ||
+                !decimal.TryParse(normalized, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsedEstimatedLoss) ||
+                parsedEstimatedLoss <= 0)
+            {
+                validationMessage = "Estimated Loss Amount must be greater than zero before proceeding to Step 4.";
+                return false;
+            }
+
+            claim.EstimatedLoss = parsedEstimatedLoss;
+            return true;
         }
 
         public class RequestedUploadInput

@@ -37,12 +37,6 @@
                         <input asp-for="Claim.Location" class="form-control" placeholder="Where did the incident occur?" />
                         <span asp-validation-for="Claim.Location" class="text-danger"></span>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label asp-for="Claim.EstimatedLoss" class="form-label">Estimated Loss Amount (UGX) <span class="text-danger">*</span></label>
-                        <input id="estimatedLossDisplay" class="form-control" type="text" inputmode="decimal" placeholder="0" value="@(Model.Claim.EstimatedLoss > 0 ? Model.Claim.EstimatedLoss.ToString("N2") : string.Empty)" />
-                        <input asp-for="Claim.EstimatedLoss" type="hidden" />
-                        <span asp-validation-for="Claim.EstimatedLoss" class="text-danger"></span>
-                    </div>
                 </div>
 
                 <div class="row">
@@ -139,9 +133,6 @@
         (function () {
             const claimTypeSelect = document.getElementById('claimTypeSelect');
             const claimTypeOtherRow = document.getElementById('claimTypeOtherRow');
-            const estimatedLossDisplay = document.getElementById('estimatedLossDisplay');
-            const estimatedLossHidden = document.getElementById('Claim_EstimatedLoss');
-            const form = document.querySelector('form.form-layout');
 
             if (!claimTypeSelect || !claimTypeOtherRow) {
                 return;
@@ -154,55 +145,6 @@
 
             claimTypeSelect.addEventListener('change', toggleOtherField);
             toggleOtherField();
-
-            if (!estimatedLossDisplay || !estimatedLossHidden || !form) {
-                return;
-            }
-
-            const sanitizeAmount = function (value) {
-                const cleaned = (value || '').replace(/,/g, '').replace(/[^\d.]/g, '');
-                const parts = cleaned.split('.');
-                if (parts.length <= 1) {
-                    return cleaned;
-                }
-
-                return parts[0] + '.' + parts.slice(1).join('');
-            };
-
-            const formatAmount = function (value) {
-                const sanitized = sanitizeAmount(value);
-                if (!sanitized) {
-                    return '';
-                }
-
-                const parts = sanitized.split('.');
-                const integerPart = parts[0].replace(/^0+(?=\d)/, '');
-                const decimalPart = parts[1] || '';
-                const formattedInteger = (integerPart || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-                return decimalPart ? formattedInteger + '.' + decimalPart.slice(0, 2) : formattedInteger;
-            };
-
-            const syncHiddenValue = function () {
-                estimatedLossHidden.value = sanitizeAmount(estimatedLossDisplay.value);
-            };
-
-            estimatedLossDisplay.addEventListener('input', function () {
-                const formatted = formatAmount(estimatedLossDisplay.value);
-                estimatedLossDisplay.value = formatted;
-                syncHiddenValue();
-            });
-
-            estimatedLossDisplay.addEventListener('blur', function () {
-                estimatedLossDisplay.value = formatAmount(estimatedLossDisplay.value);
-                syncHiddenValue();
-            });
-
-            form.addEventListener('submit', function () {
-                syncHiddenValue();
-            });
-
-            syncHiddenValue();
         })();
     </script>
 }
