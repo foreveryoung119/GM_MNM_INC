@@ -183,7 +183,6 @@ namespace InsuranceClaimsSystem.Pages.Claims
             ExistingDocuments = await _documentService.GetClaimDocumentsAsync(claimId);
             PopulateChecklistFromExistingDocuments();
             PopulateRequestedDocumentProgress();
-            SetEstimatedLossInputFromClaim(claim);
 
             if (!AllRequestedDocumentsResolved)
             {
