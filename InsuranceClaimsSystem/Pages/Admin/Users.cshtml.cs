@@ -220,6 +220,13 @@ public class UsersModel : PageModel
             return NotFound();
         }
 
+        if (await _userService.IsUserReferencedAsync(userId))
+        {
+            ModelState.AddModelError(string.Empty, "This user cannot be deleted because the account is referenced by claims or uploaded documents. Deactivate the account instead.");
+            Users = await _userService.GetAllUsersAsync();
+            return Page();
+        }
+
         var result = await _userService.DeleteUserAsync(user);
         if (!result.Succeeded)
         {

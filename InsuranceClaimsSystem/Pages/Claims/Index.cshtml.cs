@@ -22,6 +22,9 @@ namespace InsuranceClaimsSystem.Pages.Claims
         public ClaimStatus? StatusFilter { get; set; }
 
         [BindProperty(SupportsGet = true)]
+        public string? WorkflowGroup { get; set; }
+
+        [BindProperty(SupportsGet = true)]
         public DateTime? FromDate { get; set; }
 
         [BindProperty(SupportsGet = true)]
@@ -76,6 +79,11 @@ namespace InsuranceClaimsSystem.Pages.Claims
                 query = query.Where(c => c.Status == StatusFilter.Value);
             }
 
+            if (!string.IsNullOrWhiteSpace(WorkflowGroup))
+            {
+                query = query.Where(c => IsInWorkflowGroup(c.Status, WorkflowGroup));
+            }
+
             if (FromDate.HasValue)
             {
                 query = query.Where(c => c.CreatedDate.Date >= FromDate.Value.Date);
@@ -126,6 +134,18 @@ namespace InsuranceClaimsSystem.Pages.Claims
             await _claimService.UpdateClaimStatusAsync(claimId, ClaimStatus.Cancelled, userId);
 
             return RedirectToPage();
+        }
+
+        private static bool IsInWorkflowGroup(ClaimStatus status, string workflowGroup)
+        {
+            var stageNumber = ClaimWorkflowHelper.GetCurrentStageNumber(status);
+
+            return workflowGroup.Trim().ToLowerInvariant() switch
+            {
+                "pending" => stageNumber >= 1 && stageNumber <= 3,
+                "processing" => stageNumber >= 4 && stageNumber <= 6,
+                _ => true
+            };
         }
     }
 }

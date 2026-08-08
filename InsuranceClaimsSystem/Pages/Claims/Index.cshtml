@@ -22,7 +22,21 @@
 
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
+            @if (!string.IsNullOrWhiteSpace(Model.WorkflowGroup))
+            {
+                <div class="alert alert-info mb-3">
+                    @if (Model.WorkflowGroup.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <span><i class="fas fa-filter"></i> Showing claims in workflow steps 1 to 3.</span>
+                    }
+                    else if (Model.WorkflowGroup.Equals("Processing", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <span><i class="fas fa-filter"></i> Showing claims in workflow steps 4 to 6.</span>
+                    }
+                </div>
+            }
             <form method="get" class="row g-3 align-items-end">
+                <input type="hidden" name="workflowGroup" value="@Model.WorkflowGroup" />
                 <div class="col-md-4">
                     <label class="form-label" for="search">Search</label>
                     <input type="text"

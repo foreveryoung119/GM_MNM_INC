@@ -284,6 +284,25 @@ public class UserService : IUserService
     }
 
     /// <inheritdoc/>
+    public async Task<bool> IsUserReferencedAsync(string userId)
+    {
+        try
+        {
+            return await _context.InsuranceClaims.AnyAsync(claim =>
+                claim.CreatedById == userId ||
+                claim.AssessedById == userId ||
+                claim.BrokerUserId == userId)
+                || await _context.ClaimDocuments.AnyAsync(document =>
+                    document.UploadedById == userId || document.VerifiedById == userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Exception checking whether user is referenced: {ex.Message}");
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<List<ApplicationUser>> GetUsersByRoleAsync(string role)
     {
         try

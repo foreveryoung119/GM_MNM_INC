@@ -80,6 +80,13 @@ public interface IUserService
     Task<IdentityResult> DeleteUserAsync(ApplicationUser user);
 
     /// <summary>
+    /// Checks whether the user is referenced by other records that would prevent deletion.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <returns>True if the user is referenced and should not be deleted.</returns>
+    Task<bool> IsUserReferencedAsync(string userId);
+
+    /// <summary>
     /// Gets users by role.
     /// </summary>
     /// <param name="role">The role name.</param>
