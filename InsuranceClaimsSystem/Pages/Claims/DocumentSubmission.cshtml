@@ -450,6 +450,7 @@
             const replaceDocumentId = document.getElementById('requestedReplaceDocumentId');
             const replaceNotes = document.getElementById('requestedReplaceNotes');
             const replaceFileInput = document.getElementById('requestedReplaceFile');
+            const requestedSubmissionForm = document.getElementById('requestedSubmissionForm');
             const estimatedLossHidden = document.getElementById('EstimatedLossInput');
             const estimatedLossInputs = [
                 document.getElementById('estimatedLossDisplayRequested'),
@@ -509,6 +510,13 @@
                     syncPeerInputs(input);
                 });
             });
+
+            if (requestedSubmissionForm && estimatedLossInputs.length > 0) {
+                requestedSubmissionForm.addEventListener('submit', function () {
+                    syncEstimatedLossHidden(estimatedLossInputs[0]);
+                    syncPeerInputs(estimatedLossInputs[0]);
+                });
+            }
 
             if (estimatedLossInputs.length > 0) {
                 syncEstimatedLossHidden(estimatedLossInputs[0]);
