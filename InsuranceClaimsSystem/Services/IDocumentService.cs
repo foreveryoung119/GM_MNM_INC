@@ -56,6 +56,13 @@ public interface IDocumentService
     Task<(byte[], string)> DownloadDocumentAsync(int documentId);
 
     /// <summary>
+    /// Resolves the current physical file path for a document.
+    /// </summary>
+    /// <param name="document">The document to resolve.</param>
+    /// <returns>The resolved physical path, or null if the file cannot be found.</returns>
+    string? ResolveDocumentPath(ClaimDocument document);
+
+    /// <summary>
     /// Gets the uploads directory path.
     /// </summary>
     /// <returns>The uploads directory path.</returns>

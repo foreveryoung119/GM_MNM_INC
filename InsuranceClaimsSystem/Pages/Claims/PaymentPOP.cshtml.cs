@@ -170,13 +170,14 @@ namespace InsuranceClaimsSystem.Pages.Claims
                 return NotFound();
             }
 
-            if (!System.IO.File.Exists(document.FilePath))
+            var resolvedPath = _documentService.ResolveDocumentPath(document);
+            if (resolvedPath == null)
             {
                 ErrorMessage = "The selected file could not be found on the server.";
                 return RedirectToPage(new { claimId });
             }
 
-            return PhysicalFile(document.FilePath, string.IsNullOrWhiteSpace(document.MimeType) ? "application/octet-stream" : document.MimeType);
+            return PhysicalFile(resolvedPath, string.IsNullOrWhiteSpace(document.MimeType) ? "application/octet-stream" : document.MimeType);
         }
 
         private async Task LoadUploadedProofOfPaymentAsync(int claimId)

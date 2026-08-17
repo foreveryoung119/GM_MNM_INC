@@ -12,6 +12,7 @@ public class DocumentService : IDocumentService
     private readonly ApplicationDbContext _context;
     private readonly ILogger<DocumentService> _logger;
     private readonly string _uploadsDirectory;
+    private readonly string _webRootPath;
     private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
     private readonly string[] AllowedExtensions = { ".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png", ".gif", ".xlsx", ".xls" };
 
@@ -27,6 +28,7 @@ public class DocumentService : IDocumentService
     {
         _context = context;
         _logger = logger;
+        _webRootPath = webHostEnvironment.WebRootPath;
         _uploadsDirectory = Path.Combine(webHostEnvironment.WebRootPath, "uploads");
 
         if (!Directory.Exists(_uploadsDirectory))
@@ -206,10 +208,11 @@ public class DocumentService : IDocumentService
             if (document == null)
                 throw new ArgumentException($"Document with ID {documentId} not found");
 
-            if (!File.Exists(document.FilePath))
+            var resolvedPath = ResolveDocumentPath(document);
+            if (resolvedPath == null)
                 throw new InvalidOperationException("File not found on server");
 
-            var fileBytes = await File.ReadAllBytesAsync(document.FilePath);
+            var fileBytes = await File.ReadAllBytesAsync(resolvedPath);
             var fileName = $"{document.FileName}{document.FileExtension}";
 
             _logger.LogInformation($"Document {documentId} downloaded");
@@ -226,6 +229,38 @@ public class DocumentService : IDocumentService
     public string GetUploadsDirectory()
     {
         return _uploadsDirectory;
+    }
+
+    /// <inheritdoc/>
+    public string? ResolveDocumentPath(ClaimDocument document)
+    {
+        if (File.Exists(document.FilePath))
+        {
+            return document.FilePath;
+        }
+
+        var storedFileName = Path.GetFileName(document.FilePath);
+        if (string.IsNullOrWhiteSpace(storedFileName))
+        {
+            return null;
+        }
+
+        var uploadsCandidate = Path.Combine(_uploadsDirectory, storedFileName);
+        if (File.Exists(uploadsCandidate))
+        {
+            return uploadsCandidate;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_webRootPath))
+        {
+            var webRootCandidate = Path.Combine(_webRootPath, "uploads", storedFileName);
+            if (File.Exists(webRootCandidate))
+            {
+                return webRootCandidate;
+            }
+        }
+
+        return null;
     }
 
     /// <inheritdoc/>
