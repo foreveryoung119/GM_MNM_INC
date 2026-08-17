@@ -13,6 +13,7 @@ public class DocumentService : IDocumentService
     private readonly ILogger<DocumentService> _logger;
     private readonly string _uploadsDirectory;
     private readonly string _webRootPath;
+    private readonly string _contentRootPath;
     private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
     private readonly string[] AllowedExtensions = { ".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png", ".gif", ".xlsx", ".xls" };
 
@@ -29,6 +30,7 @@ public class DocumentService : IDocumentService
         _context = context;
         _logger = logger;
         _webRootPath = webHostEnvironment.WebRootPath;
+        _contentRootPath = webHostEnvironment.ContentRootPath;
         _uploadsDirectory = Path.Combine(webHostEnvironment.WebRootPath, "uploads");
 
         if (!Directory.Exists(_uploadsDirectory))
@@ -239,24 +241,58 @@ public class DocumentService : IDocumentService
             return document.FilePath;
         }
 
+        var candidates = new List<string>();
+
         var storedFileName = Path.GetFileName(document.FilePath);
-        if (string.IsNullOrWhiteSpace(storedFileName))
+        if (!string.IsNullOrWhiteSpace(storedFileName))
         {
-            return null;
-        }
+            candidates.Add(Path.Combine(_uploadsDirectory, storedFileName));
 
-        var uploadsCandidate = Path.Combine(_uploadsDirectory, storedFileName);
-        if (File.Exists(uploadsCandidate))
-        {
-            return uploadsCandidate;
-        }
-
-        if (!string.IsNullOrWhiteSpace(_webRootPath))
-        {
-            var webRootCandidate = Path.Combine(_webRootPath, "uploads", storedFileName);
-            if (File.Exists(webRootCandidate))
+            if (!string.IsNullOrWhiteSpace(_webRootPath))
             {
-                return webRootCandidate;
+                candidates.Add(Path.Combine(_webRootPath, "uploads", storedFileName));
+            }
+
+            if (!string.IsNullOrWhiteSpace(_contentRootPath))
+            {
+                candidates.Add(Path.Combine(_contentRootPath, "uploads", storedFileName));
+                candidates.Add(Path.Combine(_contentRootPath, "wwwroot", "uploads", storedFileName));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(document.FilePath) && !Path.IsPathRooted(document.FilePath))
+        {
+            var relativePath = document.FilePath.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            if (!string.IsNullOrWhiteSpace(_webRootPath))
+            {
+                candidates.Add(Path.Combine(_webRootPath, relativePath));
+            }
+
+            if (!string.IsNullOrWhiteSpace(_contentRootPath))
+            {
+                candidates.Add(Path.Combine(_contentRootPath, relativePath));
+                candidates.Add(Path.Combine(_contentRootPath, "wwwroot", relativePath));
+            }
+        }
+
+        foreach (var candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(storedFileName) && Directory.Exists(_uploadsDirectory))
+        {
+            var firstMatch = Directory
+                .EnumerateFiles(_uploadsDirectory, storedFileName, SearchOption.AllDirectories)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(firstMatch))
+            {
+                return firstMatch;
             }
         }
 
