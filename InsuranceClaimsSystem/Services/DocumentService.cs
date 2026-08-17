@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using InsuranceClaimsSystem.Data;
 using InsuranceClaimsSystem.Models;
+using Microsoft.Extensions.Configuration;
 
 namespace InsuranceClaimsSystem.Services;
 
@@ -12,6 +13,7 @@ public class DocumentService : IDocumentService
     private readonly ApplicationDbContext _context;
     private readonly ILogger<DocumentService> _logger;
     private readonly string _uploadsDirectory;
+    private readonly string _legacyUploadsDirectory;
     private readonly string _webRootPath;
     private readonly string _contentRootPath;
     private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
@@ -25,13 +27,22 @@ public class DocumentService : IDocumentService
     /// <param name="context">The database context.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="webHostEnvironment">The web host environment.</param>
-    public DocumentService(ApplicationDbContext context, ILogger<DocumentService> logger, IWebHostEnvironment webHostEnvironment)
+    public DocumentService(
+        ApplicationDbContext context,
+        ILogger<DocumentService> logger,
+        IWebHostEnvironment webHostEnvironment,
+        IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
         _webRootPath = webHostEnvironment.WebRootPath;
         _contentRootPath = webHostEnvironment.ContentRootPath;
-        _uploadsDirectory = Path.Combine(webHostEnvironment.WebRootPath, "uploads");
+        _legacyUploadsDirectory = Path.Combine(webHostEnvironment.WebRootPath, "uploads");
+
+        var configuredUploadsPath = configuration["Uploads:RootPath"];
+        _uploadsDirectory = string.IsNullOrWhiteSpace(configuredUploadsPath)
+            ? _legacyUploadsDirectory
+            : configuredUploadsPath;
 
         if (!Directory.Exists(_uploadsDirectory))
         {
@@ -248,6 +259,11 @@ public class DocumentService : IDocumentService
         {
             candidates.Add(Path.Combine(_uploadsDirectory, storedFileName));
 
+            if (!string.Equals(_uploadsDirectory, _legacyUploadsDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add(Path.Combine(_legacyUploadsDirectory, storedFileName));
+            }
+
             if (!string.IsNullOrWhiteSpace(_webRootPath))
             {
                 candidates.Add(Path.Combine(_webRootPath, "uploads", storedFileName));
@@ -293,6 +309,20 @@ public class DocumentService : IDocumentService
             if (!string.IsNullOrWhiteSpace(firstMatch))
             {
                 return firstMatch;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(storedFileName) &&
+            !string.Equals(_uploadsDirectory, _legacyUploadsDirectory, StringComparison.OrdinalIgnoreCase) &&
+            Directory.Exists(_legacyUploadsDirectory))
+        {
+            var legacyMatch = Directory
+                .EnumerateFiles(_legacyUploadsDirectory, storedFileName, SearchOption.AllDirectories)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(legacyMatch))
+            {
+                return legacyMatch;
             }
         }
 
