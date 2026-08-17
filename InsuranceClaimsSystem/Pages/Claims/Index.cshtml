@@ -4,6 +4,14 @@
     ViewData["Title"] = "Claims";
 }
 
+<style>
+    .claim-id-column {
+        min-width: 170px;
+        width: 170px;
+        white-space: nowrap;
+    }
+</style>
+
 <div class="container-fluid">
     <div class="row mb-4">
         <div class="col-md-8">
@@ -105,7 +113,7 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>Claim ID</th>
+                        <th class="claim-id-column">Claim ID</th>
                         <th>Incident Description</th>
                         <th>Status</th>
                         <th>Completion</th>
@@ -118,7 +126,7 @@
                     {
                         var isInactiveClaim = claim.Status == ClaimStatus.Cancelled || claim.Status == ClaimStatus.Rejected || claim.Status == ClaimStatus.Closed;
                         <tr>
-                            <td>
+                            <td class="claim-id-column">
                                 <strong>
                                     <a asp-page="./Index" asp-page-handler="Open" asp-route-claimId="@claim.Id" class="text-decoration-none">
                                         @claim.ClaimNumber
