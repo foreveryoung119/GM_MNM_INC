@@ -85,6 +85,7 @@
                             <tr>
                                 <th>Claim Number</th>
                                 <th>Reported Person</th>
+                                <th>Incident Description</th>
                                 <th>Type</th>
                                 <th>Status</th>
                                 <th>Created Date</th>
@@ -99,6 +100,7 @@
                                 <tr>
                                     <td><strong>@claim.ClaimNumber</strong></td>
                                     <td>@claim.ReportedPersonName</td>
+                                    <td>@claim.IncidentDescription</td>
                                     <td>@(string.IsNullOrWhiteSpace(claim.ClaimTypeOther) ? claim.ClaimType : $"{claim.ClaimType} - {claim.ClaimTypeOther}")</td>
                                     <td><span class="badge bg-secondary">@claim.Status</span></td>
                                     <td>@claim.CreatedDate.ToString("yyyy-MM-dd")</td>

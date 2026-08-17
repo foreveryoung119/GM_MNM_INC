@@ -24,7 +24,12 @@
                     </div>
                     <div class="mb-3">
                         <label asp-for="Input.Password" class="form-label"></label>
-                        <input asp-for="Input.Password" class="form-control" type="password" />
+                        <div class="input-group">
+                            <input asp-for="Input.Password" class="form-control" type="password" id="loginPassword" />
+                            <button type="button" class="btn btn-outline-secondary" id="togglePasswordVisibility" aria-label="Show password" aria-pressed="false">
+                                Show
+                            </button>
+                        </div>
                         <span asp-validation-for="Input.Password" class="text-danger"></span>
                     </div>
                     <div class="form-check mb-3">
@@ -40,4 +45,22 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const passwordInput = document.getElementById('loginPassword');
+            const toggleButton = document.getElementById('togglePasswordVisibility');
+
+            if (!passwordInput || !toggleButton) {
+                return;
+            }
+
+            toggleButton.addEventListener('click', function () {
+                const isHidden = passwordInput.type === 'password';
+                passwordInput.type = isHidden ? 'text' : 'password';
+                toggleButton.textContent = isHidden ? 'Hide' : 'Show';
+                toggleButton.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+                toggleButton.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+            });
+        })();
+    </script>
 }

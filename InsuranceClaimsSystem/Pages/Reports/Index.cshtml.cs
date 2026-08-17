@@ -48,14 +48,14 @@ namespace InsuranceClaimsSystem.Pages.Reports
             var sheet = workbook.Worksheets.Add("Claims Report");
 
             sheet.Cell(1, 1).Value = "GM Sugar - Claims Report";
-            sheet.Range(1, 1, 1, 9).Merge().Style.Font.SetBold().Font.SetFontSize(14);
+            sheet.Range(1, 1, 1, 10).Merge().Style.Font.SetBold().Font.SetFontSize(14);
 
             sheet.Cell(2, 1).Value = $"Generated: {DateTime.Now:yyyy-MM-dd HH:mm}";
             sheet.Cell(3, 1).Value = $"Filters: From={(FromDate?.ToString("yyyy-MM-dd") ?? "Any")}, To={(ToDate?.ToString("yyyy-MM-dd") ?? "Any")}, Status={(Status?.ToString() ?? "Any")}";
 
             var headers = new[]
             {
-                "Claim Number", "Reported Person", "Claim Type", "Status", "Incident Date", "Created Date", "Estimated Loss", "Approved Amount", "Settled Amount"
+                "Claim Number", "Reported Person", "Incident Description", "Claim Type", "Status", "Incident Date", "Created Date", "Estimated Loss", "Approved Amount", "Settled Amount"
             };
 
             for (var i = 0; i < headers.Length; i++)
@@ -72,19 +72,20 @@ namespace InsuranceClaimsSystem.Pages.Reports
             {
                 sheet.Cell(row, 1).Value = claim.ClaimNumber;
                 sheet.Cell(row, 2).Value = claim.ReportedPersonName;
-                sheet.Cell(row, 3).Value = string.IsNullOrWhiteSpace(claim.ClaimTypeOther) ? claim.ClaimType : $"{claim.ClaimType} - {claim.ClaimTypeOther}";
-                sheet.Cell(row, 4).Value = claim.Status.ToString();
-                sheet.Cell(row, 5).Value = claim.IncidentDate;
-                sheet.Cell(row, 6).Value = claim.CreatedDate;
-                sheet.Cell(row, 7).Value = claim.EstimatedLoss;
-                sheet.Cell(row, 8).Value = claim.ApprovedAmount ?? 0m;
-                sheet.Cell(row, 9).Value = claim.SettledAmount ?? 0m;
+                sheet.Cell(row, 3).Value = claim.IncidentDescription;
+                sheet.Cell(row, 4).Value = string.IsNullOrWhiteSpace(claim.ClaimTypeOther) ? claim.ClaimType : $"{claim.ClaimType} - {claim.ClaimTypeOther}";
+                sheet.Cell(row, 5).Value = claim.Status.ToString();
+                sheet.Cell(row, 6).Value = claim.IncidentDate;
+                sheet.Cell(row, 7).Value = claim.CreatedDate;
+                sheet.Cell(row, 8).Value = claim.EstimatedLoss;
+                sheet.Cell(row, 9).Value = claim.ApprovedAmount ?? 0m;
+                sheet.Cell(row, 10).Value = claim.SettledAmount ?? 0m;
 
-                sheet.Cell(row, 5).Style.DateFormat.Format = "yyyy-mm-dd";
                 sheet.Cell(row, 6).Style.DateFormat.Format = "yyyy-mm-dd";
-                sheet.Cell(row, 7).Style.NumberFormat.Format = "#,##0.00";
+                sheet.Cell(row, 7).Style.DateFormat.Format = "yyyy-mm-dd";
                 sheet.Cell(row, 8).Style.NumberFormat.Format = "#,##0.00";
                 sheet.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";
+                sheet.Cell(row, 10).Style.NumberFormat.Format = "#,##0.00";
 
                 row++;
             }
